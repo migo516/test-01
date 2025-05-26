@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface SubTask {
@@ -44,6 +43,7 @@ interface TaskContextType {
   deleteTask: (taskId: string) => void;
   addComment: (taskId: string, content: string, author: string) => void;
   updateSubTask: (taskId: string, subTaskId: string, completed: boolean) => void;
+  refreshTasks: () => void;
   teamMembers: string[];
 }
 
@@ -148,6 +148,11 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const openCreateModal = () => setIsCreateModalOpen(true);
   const closeCreateModal = () => setIsCreateModalOpen(false);
 
+  const refreshTasks = () => {
+    // For now, this is a placeholder. In a real app, this would refetch from the database
+    console.log('Refreshing tasks...');
+  };
+
   const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'comments'>) => {
     const newTask: Task = {
       ...taskData,
@@ -215,6 +220,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       deleteTask,
       addComment,
       updateSubTask,
+      refreshTasks,
       teamMembers,
     }}>
       {children}
