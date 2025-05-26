@@ -12,7 +12,7 @@ const columns = [
 ] as const;
 
 export const KanbanBoard = () => {
-  const { tasks, searchTerm, selectedTask, setSelectedTask, isCreateModalOpen, closeCreateModal } = useTaskContext();
+  const { tasks, searchTerm, selectedTask, setSelectedTask, isCreateModalOpen, closeCreateModal, refreshTasks } = useTaskContext();
 
   const filteredTasks = tasks.filter(task =>
     task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,6 +49,7 @@ export const KanbanBoard = () => {
       <CreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={closeCreateModal}
+        onTaskCreated={refreshTasks}
       />
     </div>
   );

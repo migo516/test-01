@@ -12,7 +12,7 @@ import { TaskDetailModal } from './TaskDetailModal';
 import { CreateTaskModal } from './CreateTaskModal';
 
 export const TaskTable = () => {
-  const { tasks, searchTerm, isCreateModalOpen, closeCreateModal } = useTaskContext();
+  const { tasks, searchTerm, isCreateModalOpen, closeCreateModal, refreshTasks } = useTaskContext();
   const [selectedTask, setSelectedTask] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -180,6 +180,7 @@ export const TaskTable = () => {
       <CreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={closeCreateModal}
+        onTaskCreated={refreshTasks}
       />
     </div>
   );

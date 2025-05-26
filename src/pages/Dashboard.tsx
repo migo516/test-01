@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -6,7 +5,7 @@ import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { TaskTable } from '@/components/tasks/TaskTable';
 import { Calendar } from '@/components/calendar/Calendar';
 import { Reports } from '@/components/reports/Reports';
-import { TeamMembers } from '@/components/team/TeamMembers';
+import TeamMembers from '@/components/team/TeamMembers';
 
 export type ViewType = 'kanban' | 'table' | 'calendar' | 'reports' | 'team';
 
