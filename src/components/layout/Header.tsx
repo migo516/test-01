@@ -21,7 +21,7 @@ const viewTitles = {
 
 export const Header = ({ currentView }: HeaderProps) => {
   const { openCreateModal, searchTerm, setSearchTerm } = useTaskContext();
-  const { signOut, user } = useAuth();
+  const { signOut, user, userProfile } = useAuth();
 
   const handleSignOut = async () => {
     try {
@@ -31,6 +31,8 @@ export const Header = ({ currentView }: HeaderProps) => {
       toast.error('로그아웃에 실패했습니다.');
     }
   };
+
+  const displayName = userProfile?.name || user?.email || '사용자';
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -61,7 +63,7 @@ export const Header = ({ currentView }: HeaderProps) => {
           )}
 
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-600">안녕하세요, {user?.email}</span>
+            <span className="text-sm text-gray-600">안녕하세요, {displayName}님</span>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-1" />
               로그아웃
