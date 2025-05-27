@@ -1,8 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
+import path from 'path'; // ← 추가
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  base: '/test-01/', // ✅ GitHub Pages용 경로 추가
+  base: '/test-01/',
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'), // ← 추가
+    },
+  },
   plugins: [react()],
 });
