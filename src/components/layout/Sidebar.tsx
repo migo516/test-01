@@ -24,13 +24,8 @@ export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
   return (
     <div className="w-64 bg-white border-r border-gray-200 shadow-sm">
       <div className="p-6">
-        <button 
-          onClick={() => onViewChange('kanban')}
-          className="text-left w-full hover:text-blue-600 transition-colors"
-        >
-          <h1 className="text-xl font-bold text-gray-900">업무 관리 시스템</h1>
-          <p className="text-sm text-gray-500 mt-1">업무 관리 대시보드</p>
-        </button>
+        <h1 className="text-xl font-bold text-gray-900">업무 관리 시스템</h1>
+        <p className="text-sm text-gray-500 mt-1">업무 관리 대시보드</p>
       </div>
       
       <nav className="px-4 pb-4">
