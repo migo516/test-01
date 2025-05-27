@@ -46,11 +46,11 @@ export const Calendar = () => {
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="flex items-center justify-between p-4 border-b">
-        <div>
+        <div className="flex items-center space-x-4">
           <h2 className="text-xl font-semibold">
             {format(currentDate, 'yyyy년 MM월', { locale: ko })}
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-gray-500">
             오늘은 {format(today, 'MM월 dd일', { locale: ko })} 입니다.
           </p>
         </div>
@@ -81,10 +81,10 @@ export const Calendar = () => {
               key={day.toString()}
               className={`bg-white p-2 min-h-24 border-r border-b ${
                 !isCurrentMonth ? 'text-gray-400 bg-gray-50' : ''
-              } ${isTodayDate ? 'bg-blue-100 border-2 border-blue-500' : ''}`}
+              } ${isTodayDate ? 'bg-blue-50 border-2 border-blue-400' : ''}`}
             >
               <div className={`text-sm font-medium mb-1 ${
-                isTodayDate ? 'text-blue-700 font-bold bg-blue-200 rounded-full w-6 h-6 flex items-center justify-center' : ''
+                isTodayDate ? 'text-blue-800 font-bold bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''
               }`}>
                 {format(day, 'd')}
               </div>
