@@ -4,6 +4,7 @@ import { ViewType } from '@/pages/Dashboard';
 import { 
   Calendar,
   ChartBar, 
+  FolderKanban, 
   Table, 
   Users 
 } from 'lucide-react';
@@ -14,6 +15,7 @@ interface SidebarProps {
 }
 
 const menuItems = [
+  { id: 'kanban' as ViewType, label: '업무 대시보드', icon: FolderKanban },
   { id: 'table' as ViewType, label: '모든 업무', icon: Table },
   { id: 'calendar' as ViewType, label: '캘린더', icon: Calendar },
   { id: 'reports' as ViewType, label: '보고서', icon: ChartBar },
