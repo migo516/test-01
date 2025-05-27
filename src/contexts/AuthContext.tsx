@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +14,7 @@ interface AuthContextType {
   session: Session | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  needsInitialSetup: boolean;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -25,6 +27,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsInitialSetup, setNeedsInitialSetup] = useState(false);
+
+  const checkInitialSetup = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .limit(1);
+
+      if (error) {
+        console.error('Error checking initial setup:', error);
+        return;
+      }
+
+      setNeedsInitialSetup(!data || data.length === 0);
+    } catch (error) {
+      console.error('Error checking initial setup:', error);
+    }
+  };
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -46,6 +67,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
+    // 초기 설정 확인
+    checkInitialSetup();
+
     // 인증 상태 변화 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -53,7 +77,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // 사용자가 로그인했을 때만 프로필 정보를 가져옴
           setTimeout(() => {
             fetchUserProfile(session.user.id);
           }, 0);
@@ -91,6 +114,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       },
     });
     if (error) throw error;
+    
+    // 회원가입 후 초기 설정 상태 업데이트
+    await checkInitialSetup();
   };
 
   const signIn = async (email: string, password: string) => {
@@ -112,6 +138,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       session,
       userProfile,
       loading,
+      needsInitialSetup,
       signUp,
       signIn,
       signOut,

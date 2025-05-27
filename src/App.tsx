@@ -8,12 +8,13 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TaskProvider } from "./contexts/TaskContext";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
+import InitialSetup from "./pages/InitialSetup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, needsInitialSetup } = useAuth();
   
   if (loading) {
     return (
@@ -21,6 +22,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         <div className="text-lg">로딩 중...</div>
       </div>
     );
+  }
+
+  if (needsInitialSetup) {
+    return <Navigate to="/setup" replace />;
   }
   
   if (!user) {
@@ -31,7 +36,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, needsInitialSetup } = useAuth();
   
   if (loading) {
     return (
@@ -40,9 +45,35 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
+
+  if (needsInitialSetup) {
+    return <Navigate to="/setup" replace />;
+  }
   
   if (user) {
     return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+const SetupRoute = ({ children }: { children: React.ReactNode }) => {
+  const { loading, needsInitialSetup, user } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">로딩 중...</div>
+      </div>
+    );
+  }
+
+  if (!needsInitialSetup) {
+    if (user) {
+      return <Navigate to="/" replace />;
+    } else {
+      return <Navigate to="/auth" replace />;
+    }
   }
   
   return <>{children}</>;
@@ -57,6 +88,14 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
+              <Route 
+                path="/setup" 
+                element={
+                  <SetupRoute>
+                    <InitialSetup />
+                  </SetupRoute>
+                } 
+              />
               <Route 
                 path="/" 
                 element={
