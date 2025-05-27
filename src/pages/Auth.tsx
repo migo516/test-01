@@ -77,7 +77,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-center">팀 워크스페이스</CardTitle>
+          <CardTitle className="text-center">업무 관리 시스템</CardTitle>
           <CardDescription className="text-center">
             업무 관리 시스템에 로그인하세요
           </CardDescription>

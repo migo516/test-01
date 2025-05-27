@@ -19,6 +19,8 @@ export const Calendar = () => {
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
+  const today = new Date();
+
   const getTasksForDay = (date: Date) => {
     return tasks.filter(task => isSameDay(task.dueDate, date));
   };
@@ -44,9 +46,14 @@ export const Calendar = () => {
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-xl font-semibold">
-          {format(currentDate, 'yyyy년 MM월', { locale: ko })}
-        </h2>
+        <div>
+          <h2 className="text-xl font-semibold">
+            {format(currentDate, 'yyyy년 MM월', { locale: ko })}
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            오늘은 {format(today, 'MM월 dd일', { locale: ko })} 입니다.
+          </p>
+        </div>
         <div className="flex space-x-2">
           <Button variant="outline" size="sm" onClick={previousMonth}>
             <ChevronLeft className="w-4 h-4" />
@@ -74,9 +81,11 @@ export const Calendar = () => {
               key={day.toString()}
               className={`bg-white p-2 min-h-24 border-r border-b ${
                 !isCurrentMonth ? 'text-gray-400 bg-gray-50' : ''
-              } ${isTodayDate ? 'bg-blue-50' : ''}`}
+              } ${isTodayDate ? 'bg-blue-100 border-2 border-blue-500' : ''}`}
             >
-              <div className={`text-sm font-medium mb-1 ${isTodayDate ? 'text-blue-600' : ''}`}>
+              <div className={`text-sm font-medium mb-1 ${
+                isTodayDate ? 'text-blue-700 font-bold bg-blue-200 rounded-full w-6 h-6 flex items-center justify-center' : ''
+              }`}>
                 {format(day, 'd')}
               </div>
               

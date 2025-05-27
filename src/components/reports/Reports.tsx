@@ -2,9 +2,36 @@
 import { useTaskContext } from '@/contexts/TaskContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Profile {
+  id: string;
+  name: string;
+  role: string;
+}
 
 export const Reports = () => {
-  const { tasks, teamMembers } = useTaskContext();
+  const { tasks } = useTaskContext();
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+
+  useEffect(() => {
+    fetchProfiles();
+  }, []);
+
+  const fetchProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, role');
+      
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (error) {
+      console.error('프로필 로드 실패:', error);
+    }
+  };
 
   // 상태별 업무 통계
   const statusData = [
@@ -21,13 +48,13 @@ export const Reports = () => {
     { name: '낮음', value: tasks.filter(t => t.priority === 'low').length, color: '#10B981' },
   ];
 
-  // 팀원별 업무 통계
-  const memberData = teamMembers.map(member => ({
-    name: member,
-    total: tasks.filter(t => t.assignee === member).length,
-    completed: tasks.filter(t => t.assignee === member && t.status === 'completed').length,
-    inProgress: tasks.filter(t => t.assignee === member && t.status === 'in-progress').length,
-    delayed: tasks.filter(t => t.assignee === member && t.status === 'delayed').length,
+  // 실제 등록된 사원별 업무 통계
+  const memberData = profiles.map(profile => ({
+    name: profile.name,
+    total: tasks.filter(t => t.assignee === profile.name).length,
+    completed: tasks.filter(t => t.assignee === profile.name && t.status === 'completed').length,
+    inProgress: tasks.filter(t => t.assignee === profile.name && t.status === 'in-progress').length,
+    delayed: tasks.filter(t => t.assignee === profile.name && t.status === 'delayed').length,
   }));
 
   const totalTasks = tasks.length;
@@ -130,25 +157,27 @@ export const Reports = () => {
         </Card>
       </div>
 
-      {/* 팀원별 업무 현황 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>팀원별 업무 현황</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={memberData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="completed" stackId="a" fill="#10B981" name="완료됨" />
-              <Bar dataKey="inProgress" stackId="a" fill="#3B82F6" name="진행 중" />
-              <Bar dataKey="delayed" stackId="a" fill="#EF4444" name="지연됨" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* 사원별 업무 현황 */}
+      {memberData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>사원별 업무 현황</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={memberData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="completed" stackId="a" fill="#10B981" name="완료됨" />
+                <Bar dataKey="inProgress" stackId="a" fill="#3B82F6" name="진행 중" />
+                <Bar dataKey="delayed" stackId="a" fill="#EF4444" name="지연됨" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 전체 진행률 */}
       <Card>

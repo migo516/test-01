@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -7,7 +8,7 @@ import { Calendar } from '@/components/calendar/Calendar';
 import { Reports } from '@/components/reports/Reports';
 import TeamMembers from '@/components/team/TeamMembers';
 
-export type ViewType = 'kanban' | 'table' | 'calendar' | 'reports' | 'team';
+export type ViewType = 'kanban' | 'table' | 'calendar' | 'reports' | 'employee';
 
 const Dashboard = () => {
   const [currentView, setCurrentView] = useState<ViewType>('kanban');
@@ -22,7 +23,7 @@ const Dashboard = () => {
         return <Calendar />;
       case 'reports':
         return <Reports />;
-      case 'team':
+      case 'employee':
         return <TeamMembers />;
       default:
         return <KanbanBoard />;

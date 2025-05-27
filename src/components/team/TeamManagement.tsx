@@ -23,8 +23,8 @@ interface Profile {
 const TeamManagement = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [inviteData, setInviteData] = useState({
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [registerData, setRegisterData] = useState({
     name: '',
     email: '',
     password: '',
@@ -46,32 +46,32 @@ const TeamManagement = () => {
       setProfiles(data || []);
     } catch (error) {
       console.error('프로필 로드 실패:', error);
-      toast.error('팀원 목록을 불러오지 못했습니다.');
+      toast.error('사원 목록을 불러오지 못했습니다.');
     }
   };
 
-  const handleInviteUser = async (e: React.FormEvent) => {
+  const handleRegisterUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!inviteData.name || !inviteData.email || !inviteData.password) {
+    if (!registerData.name || !registerData.email || !registerData.password) {
       toast.error('모든 필드를 입력해주세요.');
       return;
     }
 
-    if (inviteData.password.length < 6) {
+    if (registerData.password.length < 6) {
       toast.error('비밀번호는 6자 이상이어야 합니다.');
       return;
     }
 
     setLoading(true);
     try {
-      // 사용자 생성 (관리자가 팀원을 추가하는 기능)
+      // 사용자 생성 (관리자가 사원을 등록하는 기능)
       const { data: { user }, error: signUpError } = await supabase.auth.admin.createUser({
-        email: inviteData.email,
-        password: inviteData.password,
+        email: registerData.email,
+        password: registerData.password,
         email_confirm: true,
         user_metadata: {
-          name: inviteData.name,
+          name: registerData.name,
         }
       });
 
@@ -81,25 +81,25 @@ const TeamManagement = () => {
         // 프로필 업데이트 (역할 설정)
         const { error: updateError } = await supabase
           .from('profiles')
-          .update({ role: inviteData.role })
+          .update({ role: registerData.role })
           .eq('id', user.id);
 
         if (updateError) throw updateError;
       }
 
-      toast.success('팀원이 성공적으로 추가되었습니다.');
+      toast.success('사원이 성공적으로 등록되었습니다.');
       
-      setInviteData({
+      setRegisterData({
         name: '',
         email: '',
         password: '',
         role: 'user',
       });
-      setIsInviteModalOpen(false);
+      setIsRegisterModalOpen(false);
       fetchProfiles();
     } catch (error: any) {
-      console.error('팀원 추가 실패:', error);
-      toast.error(error.message || '팀원 추가에 실패했습니다.');
+      console.error('사원 등록 실패:', error);
+      toast.error(error.message || '사원 등록에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -144,12 +144,12 @@ const TeamManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">팀원 관리</h2>
-          <p className="text-gray-600 mt-1">팀원을 추가하고 역할을 관리하세요</p>
+          <h2 className="text-2xl font-bold">사원 관리</h2>
+          <p className="text-gray-600 mt-1">사원을 등록하고 역할을 관리하세요</p>
         </div>
-        <Button onClick={() => setIsInviteModalOpen(true)}>
+        <Button onClick={() => setIsRegisterModalOpen(true)}>
           <UserPlus className="w-4 h-4 mr-2" />
-          팀원 초대
+          사원 등록
         </Button>
       </div>
 
@@ -162,7 +162,7 @@ const TeamManagement = () => {
                   <div>
                     <h3 className="font-semibold">{profile.name}</h3>
                     <p className="text-sm text-gray-600">
-                      가입일: {format(new Date(profile.created_at), 'yyyy년 MM월 dd일', { locale: ko })}
+                      등록일: {format(new Date(profile.created_at), 'yyyy년 MM월 dd일', { locale: ko })}
                     </p>
                   </div>
                 </div>
@@ -190,20 +190,20 @@ const TeamManagement = () => {
         ))}
       </div>
 
-      <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+      <Dialog open={isRegisterModalOpen} onOpenChange={setIsRegisterModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>팀원 초대</DialogTitle>
+            <DialogTitle>사원 등록</DialogTitle>
           </DialogHeader>
           
-          <form onSubmit={handleInviteUser} className="space-y-4">
+          <form onSubmit={handleRegisterUser} className="space-y-4">
             <div>
               <Label htmlFor="name">이름 *</Label>
               <Input
                 id="name"
-                value={inviteData.name}
-                onChange={(e) => setInviteData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="팀원 이름을 입력하세요"
+                value={registerData.name}
+                onChange={(e) => setRegisterData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="사원 이름을 입력하세요"
                 required
               />
             </div>
@@ -213,8 +213,8 @@ const TeamManagement = () => {
               <Input
                 id="email"
                 type="email"
-                value={inviteData.email}
-                onChange={(e) => setInviteData(prev => ({ ...prev, email: e.target.value }))}
+                value={registerData.email}
+                onChange={(e) => setRegisterData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="이메일을 입력하세요"
                 required
               />
@@ -225,8 +225,8 @@ const TeamManagement = () => {
               <Input
                 id="password"
                 type="password"
-                value={inviteData.password}
-                onChange={(e) => setInviteData(prev => ({ ...prev, password: e.target.value }))}
+                value={registerData.password}
+                onChange={(e) => setRegisterData(prev => ({ ...prev, password: e.target.value }))}
                 placeholder="6자 이상의 비밀번호를 입력하세요"
                 required
               />
@@ -234,7 +234,7 @@ const TeamManagement = () => {
             
             <div>
               <Label htmlFor="role">역할</Label>
-              <Select value={inviteData.role} onValueChange={(value) => setInviteData(prev => ({ ...prev, role: value }))}>
+              <Select value={registerData.role} onValueChange={(value) => setRegisterData(prev => ({ ...prev, role: value }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -247,11 +247,11 @@ const TeamManagement = () => {
             </div>
             
             <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsInviteModalOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsRegisterModalOpen(false)}>
                 취소
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? '초대 중...' : '팀원 초대'}
+                {loading ? '등록 중...' : '사원 등록'}
               </Button>
             </div>
           </form>
