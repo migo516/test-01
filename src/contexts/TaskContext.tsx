@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -80,8 +79,8 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         id: task.id,
         title: task.title,
         description: task.description || '',
-        status: task.status,
-        priority: task.priority,
+        status: task.status as 'todo' | 'in-progress' | 'delayed' | 'completed',
+        priority: task.priority as 'low' | 'medium' | 'high',
         assignee: task.profiles?.name || '미배정',
         dueDate: task.due_date ? new Date(task.due_date) : new Date(),
         createdAt: new Date(task.created_at),
