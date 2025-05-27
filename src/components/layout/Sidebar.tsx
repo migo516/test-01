@@ -4,10 +4,9 @@ import {
   Calendar,
   ChartBar,
   Table,
-  Users,
-  UserGroup,
+  Users, // ✅ 아이콘 수정됨
 } from 'lucide-react';
-import { Link } from 'react-router-dom'; // 추가된 import
+import { Link } from 'react-router-dom';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -57,7 +56,7 @@ export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {
               to="/team"
               className="w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
             >
-              <UserGroup className="w-5 h-5 mr-3" />
+              <Users className="w-5 h-5 mr-3" /> {/* ✅ UserGroup → Users */}
               팀원
             </Link>
           </li>
