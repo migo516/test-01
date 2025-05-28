@@ -17,6 +17,7 @@ const viewTitles = {
   calendar: '캘린더',
   reports: '보고서',
   employee: '사원 관리',
+  'employee-tasks': '사원별 업무',
 };
 
 export const Header = ({ currentView }: HeaderProps) => {

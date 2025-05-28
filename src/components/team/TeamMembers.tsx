@@ -1,8 +1,8 @@
 
-import TeamMembersWithDelete from './TeamMembersWithDelete';
+import TeamManagement from './TeamManagement';
 
 const TeamMembers = () => {
-  return <TeamMembersWithDelete />;
+  return <TeamManagement />;
 };
 
 export default TeamMembers;

@@ -6,7 +6,8 @@ import {
   ChartBar, 
   FolderKanban, 
   Table, 
-  Users 
+  Users,
+  UserCheck
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,6 +21,7 @@ const menuItems = [
   { id: 'calendar' as ViewType, label: '캘린더', icon: Calendar },
   { id: 'reports' as ViewType, label: '보고서', icon: ChartBar },
   { id: 'employee' as ViewType, label: '사원 관리', icon: Users },
+  { id: 'employee-tasks' as ViewType, label: '사원별 업무', icon: UserCheck },
 ];
 
 export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {

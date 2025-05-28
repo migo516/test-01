@@ -7,8 +7,9 @@ import { TaskTable } from '@/components/tasks/TaskTable';
 import { Calendar } from '@/components/calendar/Calendar';
 import { Reports } from '@/components/reports/Reports';
 import TeamMembers from '@/components/team/TeamMembers';
+import EmployeeTasks from '@/components/team/EmployeeTasks';
 
-export type ViewType = 'kanban' | 'table' | 'calendar' | 'reports' | 'employee';
+export type ViewType = 'kanban' | 'table' | 'calendar' | 'reports' | 'employee' | 'employee-tasks';
 
 const Dashboard = () => {
   const [currentView, setCurrentView] = useState<ViewType>('kanban');
@@ -25,6 +26,8 @@ const Dashboard = () => {
         return <Reports />;
       case 'employee':
         return <TeamMembers />;
+      case 'employee-tasks':
+        return <EmployeeTasks />;
       default:
         return <KanbanBoard />;
     }
