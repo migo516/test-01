@@ -18,10 +18,10 @@ interface SidebarProps {
 const menuItems = [
   { id: 'kanban' as ViewType, label: '업무 대시보드', icon: FolderKanban },
   { id: 'table' as ViewType, label: '모든 업무', icon: Table },
+  { id: 'employee-tasks' as ViewType, label: '사원별 업무', icon: UserCheck },
   { id: 'calendar' as ViewType, label: '캘린더', icon: Calendar },
   { id: 'reports' as ViewType, label: '보고서', icon: ChartBar },
   { id: 'employee' as ViewType, label: '사원 관리', icon: Users },
-  { id: 'employee-tasks' as ViewType, label: '사원별 업무', icon: UserCheck },
 ];
 
 export const Sidebar = ({ currentView, onViewChange }: SidebarProps) => {

@@ -58,8 +58,8 @@ const TeamManagement = () => {
       return;
     }
 
-    if (registerData.password.length < 6) {
-      toast.error('비밀번호는 6자 이상이어야 합니다.');
+    if (registerData.password.length < 4) {
+      toast.error('비밀번호는 4자 이상이어야 합니다.');
       return;
     }
 
@@ -119,6 +119,27 @@ const TeamManagement = () => {
     } catch (error: any) {
       console.error('역할 변경 실패:', error);
       toast.error('역할 변경에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`정말로 ${userName}님을 삭제하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      toast.success(`${userName}님이 삭제되었습니다.`);
+      fetchProfiles();
+    } catch (error) {
+      console.error('사원 삭제 실패:', error);
+      toast.error('사원 삭제에 실패했습니다.');
     }
   };
 
@@ -183,6 +204,14 @@ const TeamManagement = () => {
                   <Badge className={getRoleBadgeColor(profile.role)}>
                     {getRoleLabel(profile.role)}
                   </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 hover:bg-red-100"
+                    onClick={() => handleDeleteUser(profile.id, profile.name)}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -227,7 +256,7 @@ const TeamManagement = () => {
                 type="password"
                 value={registerData.password}
                 onChange={(e) => setRegisterData(prev => ({ ...prev, password: e.target.value }))}
-                placeholder="6자 이상의 비밀번호를 입력하세요"
+                placeholder="4자 이상의 비밀번호를 입력하세요"
                 required
               />
             </div>
