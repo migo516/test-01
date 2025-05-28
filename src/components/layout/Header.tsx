@@ -12,11 +12,11 @@ interface HeaderProps {
 }
 
 const viewTitles = {
-  kanban: '팀 업무 대시보드',
+  kanban: '업무 대시보드',
   table: '모든 업무',
   calendar: '캘린더',
   reports: '보고서',
-  team: '팀원 관리',
+  employee: '사원 관리',
 };
 
 export const Header = ({ currentView }: HeaderProps) => {

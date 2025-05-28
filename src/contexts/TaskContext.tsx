@@ -46,6 +46,7 @@ interface TaskContextType {
   updateSubTask: (taskId: string, subTaskId: string, completed: boolean) => void;
   refreshTasks: () => void;
   teamMembers: string[];
+  deleteTeamMember: (memberId: string) => void;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -68,9 +69,13 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         .from('tasks')
         .select(`
           *,
-          profiles:assignee_id(name),
-          sub_tasks(*),
-          comments(*)
+          assignee_profile:profiles!tasks_assignee_id_fkey(name),
+          sub_tasks(*,
+            assignee_profile:profiles!sub_tasks_assignee_id_fkey(name)
+          ),
+          comments(*,
+            author_profile:profiles!comments_author_id_fkey(name)
+          )
         `);
 
       if (error) throw error;
@@ -81,7 +86,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         description: task.description || '',
         status: task.status as 'todo' | 'in-progress' | 'delayed' | 'completed',
         priority: task.priority as 'low' | 'medium' | 'high',
-        assignee: task.profiles?.name || '미배정',
+        assignee: task.assignee_profile?.name || '미배정',
         dueDate: task.due_date ? new Date(task.due_date) : new Date(),
         createdAt: new Date(task.created_at),
         progress: task.progress || 0,
@@ -89,11 +94,11 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
           id: st.id,
           title: st.title,
           completed: st.completed,
-          assignee: st.assignee_id || '미배정'
+          assignee: st.assignee_profile?.name || '미배정'
         })),
         comments: (task.comments || []).map((c: any) => ({
           id: c.id,
-          author: c.author_id,
+          author: c.author_profile?.name || '알 수 없음',
           content: c.content,
           timestamp: new Date(c.created_at)
         })),
@@ -111,7 +116,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('name')
+        .select('id, name')
         .order('name');
 
       if (error) throw error;
@@ -119,6 +124,21 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('팀원 로드 실패:', error);
       setTeamMembers([]);
+    }
+  };
+
+  const deleteTeamMember = async (memberId: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', memberId);
+
+      if (error) throw error;
+      await loadTeamMembers();
+    } catch (error) {
+      console.error('사원 삭제 실패:', error);
+      throw error;
     }
   };
 
@@ -192,12 +212,21 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 
   const addComment = async (taskId: string, content: string, author: string) => {
     try {
+      // 현재 사용자의 프로필 ID를 가져옵니다
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('name', author)
+        .single();
+
+      if (profileError) throw profileError;
+
       const { error } = await supabase
         .from('comments')
         .insert({
           task_id: taskId,
           content,
-          author_id: author
+          author_id: profile.id
         });
 
       if (error) throw error;
@@ -238,6 +267,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       updateSubTask,
       refreshTasks,
       teamMembers,
+      deleteTeamMember,
     }}>
       {children}
     </TaskContext.Provider>
