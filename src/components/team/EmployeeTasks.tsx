@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/contexts/TaskContext';
 import { supabase } from '@/integrations/supabase/client';
-import { UserCheck } from 'lucide-react';
 import EmployeeProfile from './EmployeeProfile';
 
 interface TeamMember {
@@ -65,11 +64,6 @@ const EmployeeTasks = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-2">
-        <UserCheck className="w-6 h-6" />
-        <h2 className="text-2xl font-bold">팀</h2>
-      </div>
-
       <div className="mb-6">
         <input
           type="text"
@@ -99,7 +93,6 @@ const EmployeeTasks = () => {
 
       {teamMembers.length === 0 && (
         <div className="text-center py-12">
-          <UserCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600">등록된 사원이 없습니다.</p>
         </div>
       )}

@@ -1,7 +1,6 @@
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Mail, Phone, BarChart3 } from 'lucide-react';
 
 interface TeamMember {
@@ -47,14 +46,9 @@ const EmployeeProfile = ({ member, stats }: EmployeeProfileProps) => {
   const totalTasks = stats.todo + stats['in-progress'] + stats.completed + stats.delayed;
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader className="text-center pb-4">
-        <div className="flex flex-col items-center space-y-3">
-          <Avatar className="w-16 h-16">
-            <AvatarFallback className="bg-blue-100 text-blue-800 font-semibold text-lg">
-              {member.name.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
+    <Card className="w-full aspect-square">
+      <CardHeader className="text-center pb-3">
+        <div className="flex flex-col items-center space-y-2">
           <div>
             <h3 className="text-lg font-semibold">{member.name}</h3>
             <Badge className={getRoleColor(member.role)} variant="outline">
@@ -64,11 +58,11 @@ const EmployeeProfile = ({ member, stats }: EmployeeProfileProps) => {
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 px-4 pb-4">
         {member.email && (
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <Mail className="w-4 h-4" />
-            <span>{member.email}</span>
+            <span className="truncate">{member.email}</span>
           </div>
         )}
         
@@ -79,26 +73,26 @@ const EmployeeProfile = ({ member, stats }: EmployeeProfileProps) => {
           </div>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <BarChart3 className="w-4 h-4" />
             <span className="text-sm font-medium">업무 통계</span>
           </div>
           
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-gray-50 p-2 rounded text-center">
+          <div className="grid grid-cols-2 gap-1 text-xs">
+            <div className="bg-gray-50 p-1 rounded text-center">
               <div className="font-semibold text-gray-800">{stats.todo}</div>
               <div className="text-gray-600">대기</div>
             </div>
-            <div className="bg-blue-50 p-2 rounded text-center">
+            <div className="bg-blue-50 p-1 rounded text-center">
               <div className="font-semibold text-blue-800">{stats['in-progress']}</div>
               <div className="text-blue-600">진행중</div>
             </div>
-            <div className="bg-orange-50 p-2 rounded text-center">
+            <div className="bg-orange-50 p-1 rounded text-center">
               <div className="font-semibold text-orange-800">{stats.delayed}</div>
               <div className="text-orange-600">지연</div>
             </div>
-            <div className="bg-green-50 p-2 rounded text-center">
+            <div className="bg-green-50 p-1 rounded text-center">
               <div className="font-semibold text-green-800">{stats.completed}</div>
               <div className="text-green-600">완료</div>
             </div>

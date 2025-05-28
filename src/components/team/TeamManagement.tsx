@@ -17,6 +17,7 @@ interface Profile {
   id: string;
   name: string;
   role: string;
+  phone?: string;
   created_at: string;
 }
 
@@ -24,10 +25,20 @@ const TeamManagement = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [registerData, setRegisterData] = useState({
     name: '',
     email: '',
     password: '',
+    phone: '',
+    role: 'user',
+  });
+  const [editData, setEditData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: '',
     role: 'user',
   });
 
@@ -54,7 +65,7 @@ const TeamManagement = () => {
     e.preventDefault();
     
     if (!registerData.name || !registerData.email || !registerData.password) {
-      toast.error('모든 필드를 입력해주세요.');
+      toast.error('이름, 이메일, 비밀번호를 입력해주세요.');
       return;
     }
 
@@ -65,23 +76,25 @@ const TeamManagement = () => {
 
     setLoading(true);
     try {
-      // 사용자 생성 (관리자가 사원을 등록하는 기능)
       const { data: { user }, error: signUpError } = await supabase.auth.admin.createUser({
         email: registerData.email,
         password: registerData.password,
         email_confirm: true,
         user_metadata: {
           name: registerData.name,
+          phone: registerData.phone,
         }
       });
 
       if (signUpError) throw signUpError;
 
       if (user) {
-        // 프로필 업데이트 (역할 설정)
         const { error: updateError } = await supabase
           .from('profiles')
-          .update({ role: registerData.role })
+          .update({ 
+            role: registerData.role,
+            phone: registerData.phone 
+          })
           .eq('id', user.id);
 
         if (updateError) throw updateError;
@@ -93,6 +106,7 @@ const TeamManagement = () => {
         name: '',
         email: '',
         password: '',
+        phone: '',
         role: 'user',
       });
       setIsRegisterModalOpen(false);
@@ -103,6 +117,76 @@ const TeamManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedProfile || !editData.name || !editData.email) {
+      toast.error('이름과 이메일을 입력해주세요.');
+      return;
+    }
+
+    if (editData.password && editData.password.length < 4) {
+      toast.error('비밀번호는 4자 이상이어야 합니다.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 프로필 정보 업데이트
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          name: editData.name,
+          role: editData.role,
+          phone: editData.phone 
+        })
+        .eq('id', selectedProfile.id);
+
+      if (profileError) throw profileError;
+
+      // 비밀번호가 입력된 경우에만 비밀번호 업데이트
+      if (editData.password) {
+        const { error: passwordError } = await supabase.auth.admin.updateUserById(
+          selectedProfile.id,
+          { password: editData.password }
+        );
+        if (passwordError) throw passwordError;
+      }
+
+      // 이메일이 변경된 경우 이메일 업데이트
+      if (editData.email !== selectedProfile.id) {
+        const { error: emailError } = await supabase.auth.admin.updateUserById(
+          selectedProfile.id,
+          { email: editData.email }
+        );
+        if (emailError) throw emailError;
+      }
+
+      toast.success('사원 정보가 성공적으로 수정되었습니다.');
+      
+      setIsEditModalOpen(false);
+      setSelectedProfile(null);
+      fetchProfiles();
+    } catch (error: any) {
+      console.error('사원 수정 실패:', error);
+      toast.error(error.message || '사원 수정에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openEditModal = (profile: Profile) => {
+    setSelectedProfile(profile);
+    setEditData({
+      name: profile.name,
+      email: '',
+      password: '',
+      phone: profile.phone || '',
+      role: profile.role,
+    });
+    setIsEditModalOpen(true);
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
@@ -182,6 +266,9 @@ const TeamManagement = () => {
                 <div className="flex items-center space-x-4">
                   <div>
                     <h3 className="font-semibold">{profile.name}</h3>
+                    {profile.phone && (
+                      <p className="text-sm text-gray-500">{profile.phone}</p>
+                    )}
                     <p className="text-sm text-gray-600">
                       등록일: {format(new Date(profile.created_at), 'yyyy년 MM월 dd일', { locale: ko })}
                     </p>
@@ -207,6 +294,14 @@ const TeamManagement = () => {
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-8 w-8 p-0 hover:bg-blue-100"
+                    onClick={() => openEditModal(profile)}
+                  >
+                    <Edit className="w-4 h-4 text-blue-600" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="h-8 w-8 p-0 hover:bg-red-100"
                     onClick={() => handleDeleteUser(profile.id, profile.name)}
                   >
@@ -219,6 +314,7 @@ const TeamManagement = () => {
         ))}
       </div>
 
+      {/* 사원 등록 모달 */}
       <Dialog open={isRegisterModalOpen} onOpenChange={setIsRegisterModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -246,6 +342,17 @@ const TeamManagement = () => {
                 onChange={(e) => setRegisterData(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="이메일을 입력하세요"
                 required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="phone">휴대전화번호</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={registerData.phone}
+                onChange={(e) => setRegisterData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="010-1234-5678"
               />
             </div>
             
@@ -281,6 +388,85 @@ const TeamManagement = () => {
               </Button>
               <Button type="submit" disabled={loading}>
                 {loading ? '등록 중...' : '사원 등록'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 사원 수정 모달 */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>사원 정보 수정</DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleEditUser} className="space-y-4">
+            <div>
+              <Label htmlFor="editName">이름 *</Label>
+              <Input
+                id="editName"
+                value={editData.name}
+                onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="사원 이름을 입력하세요"
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="editEmail">이메일 *</Label>
+              <Input
+                id="editEmail"
+                type="email"
+                value={editData.email}
+                onChange={(e) => setEditData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="이메일을 입력하세요"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="editPhone">휴대전화번호</Label>
+              <Input
+                id="editPhone"
+                type="tel"
+                value={editData.phone}
+                onChange={(e) => setEditData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="010-1234-5678"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="editPassword">새 비밀번호 (변경시에만 입력)</Label>
+              <Input
+                id="editPassword"
+                type="password"
+                value={editData.password}
+                onChange={(e) => setEditData(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="4자 이상의 비밀번호를 입력하세요"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="editRole">역할</Label>
+              <Select value={editData.role} onValueChange={(value) => setEditData(prev => ({ ...prev, role: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">일반 사용자</SelectItem>
+                  <SelectItem value="manager">매니저</SelectItem>
+                  <SelectItem value="admin">관리자</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                취소
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? '수정 중...' : '사원 수정'}
               </Button>
             </div>
           </form>
