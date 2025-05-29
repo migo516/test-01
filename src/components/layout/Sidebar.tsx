@@ -1,13 +1,14 @@
 
 import { cn } from '@/lib/utils';
-import { ViewType } from '@/pages/Dashboard';
+import { ViewType } from '@/App';
 import { 
   Calendar,
   ChartBar, 
   FolderKanban, 
   Table, 
   Users,
-  UserCheck
+  UserCheck,
+  Home
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -16,6 +17,7 @@ interface SidebarProps {
 }
 
 const menuItems = [
+  { id: 'dashboard' as ViewType, label: '대시보드', icon: Home },
   { id: 'kanban' as ViewType, label: '업무 대시보드', icon: FolderKanban },
   { id: 'table' as ViewType, label: '모든 업무', icon: Table },
   { id: 'employee-tasks' as ViewType, label: '사원별 업무', icon: UserCheck },
