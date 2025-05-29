@@ -14,10 +14,10 @@ import NotFound from "./pages/NotFound";
 
 // Views
 import Dashboard from "./pages/Dashboard";
-import KanbanBoard from "./components/kanban/KanbanBoard";
-import TaskTable from "./components/tasks/TaskTable";
-import Calendar from "./components/calendar/Calendar";
-import Reports from "./components/reports/Reports";
+import { KanbanBoard } from "./components/kanban/KanbanBoard";
+import { TaskTable } from "./components/tasks/TaskTable";
+import { Calendar } from "./components/calendar/Calendar";
+import { Reports } from "./components/reports/Reports";
 import TeamManagement from "./components/team/TeamManagement";
 import EmployeeTasks from "./components/team/EmployeeTasks";
 
