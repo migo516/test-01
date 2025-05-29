@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -212,16 +211,23 @@ const TeamManagement = () => {
     }
 
     try {
-      const { error } = await supabase
+      // Supabase Auth에서 사용자 삭제
+      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+      if (authError) throw authError;
+
+      // 프로필 테이블에서도 삭제 (외래키 관계로 인해 자동으로 삭제될 수도 있음)
+      const { error: profileError } = await supabase
         .from('profiles')
         .delete()
         .eq('id', userId);
 
-      if (error) throw error;
+      if (profileError && !profileError.message.includes('No rows')) {
+        throw profileError;
+      }
       
       toast.success(`${userName}님이 삭제되었습니다.`);
       fetchProfiles();
-    } catch (error) {
+    } catch (error: any) {
       console.error('사원 삭제 실패:', error);
       toast.error('사원 삭제에 실패했습니다.');
     }
@@ -346,13 +352,14 @@ const TeamManagement = () => {
             </div>
 
             <div>
-              <Label htmlFor="phone">휴대전화번호</Label>
+              <Label htmlFor="phone">휴대전화번호 *</Label>
               <Input
                 id="phone"
                 type="tel"
                 value={registerData.phone}
                 onChange={(e) => setRegisterData(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="010-1234-5678"
+                required
               />
             </div>
             
