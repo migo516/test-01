@@ -1,7 +1,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ViewType } from '@/App';
+import { ViewType } from '@/pages/Dashboard';
 import { useTaskContext } from '@/contexts/TaskContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogOut } from 'lucide-react';
@@ -12,7 +12,6 @@ interface HeaderProps {
 }
 
 const viewTitles = {
-  dashboard: '대시보드',
   kanban: '업무 대시보드',
   table: '모든 업무',
   calendar: '캘린더',

@@ -36,6 +36,8 @@ const TeamManagement = () => {
   });
   const [editData, setEditData] = useState({
     name: '',
+    email: '',
+    password: '',
     phone: '',
     role: 'user',
   });
@@ -49,7 +51,6 @@ const TeamManagement = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .neq('role', 'deleted')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -75,14 +76,13 @@ const TeamManagement = () => {
 
     setLoading(true);
     try {
-      const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+      const { data: { user }, error: signUpError } = await supabase.auth.admin.createUser({
         email: registerData.email,
         password: registerData.password,
-        options: {
-          data: {
-            name: registerData.name,
-            phone: registerData.phone,
-          }
+        email_confirm: true,
+        user_metadata: {
+          name: registerData.name,
+          phone: registerData.phone,
         }
       });
 
@@ -122,13 +122,19 @@ const TeamManagement = () => {
   const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedProfile || !editData.name) {
-      toast.error('이름을 입력해주세요.');
+    if (!selectedProfile || !editData.name || !editData.email) {
+      toast.error('이름과 이메일을 입력해주세요.');
+      return;
+    }
+
+    if (editData.password && editData.password.length < 4) {
+      toast.error('비밀번호는 4자 이상이어야 합니다.');
       return;
     }
 
     setLoading(true);
     try {
+      // 프로필 정보 업데이트
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
@@ -139,6 +145,24 @@ const TeamManagement = () => {
         .eq('id', selectedProfile.id);
 
       if (profileError) throw profileError;
+
+      // 비밀번호가 입력된 경우에만 비밀번호 업데이트
+      if (editData.password) {
+        const { error: passwordError } = await supabase.auth.admin.updateUserById(
+          selectedProfile.id,
+          { password: editData.password }
+        );
+        if (passwordError) throw passwordError;
+      }
+
+      // 이메일이 변경된 경우 이메일 업데이트
+      if (editData.email !== selectedProfile.id) {
+        const { error: emailError } = await supabase.auth.admin.updateUserById(
+          selectedProfile.id,
+          { email: editData.email }
+        );
+        if (emailError) throw emailError;
+      }
 
       toast.success('사원 정보가 성공적으로 수정되었습니다.');
       
@@ -157,6 +181,8 @@ const TeamManagement = () => {
     setSelectedProfile(profile);
     setEditData({
       name: profile.name,
+      email: '',
+      password: '',
       phone: profile.phone || '',
       role: profile.role,
     });
@@ -186,17 +212,16 @@ const TeamManagement = () => {
     }
 
     try {
-      // 소프트 삭제: 역할을 'deleted'로 변경
       const { error } = await supabase
         .from('profiles')
-        .update({ role: 'deleted' })
+        .delete()
         .eq('id', userId);
 
       if (error) throw error;
       
       toast.success(`${userName}님이 삭제되었습니다.`);
       fetchProfiles();
-    } catch (error: any) {
+    } catch (error) {
       console.error('사원 삭제 실패:', error);
       toast.error('사원 삭제에 실패했습니다.');
     }
@@ -387,6 +412,18 @@ const TeamManagement = () => {
                 required
               />
             </div>
+            
+            <div>
+              <Label htmlFor="editEmail">이메일 *</Label>
+              <Input
+                id="editEmail"
+                type="email"
+                value={editData.email}
+                onChange={(e) => setEditData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="이메일을 입력하세요"
+                required
+              />
+            </div>
 
             <div>
               <Label htmlFor="editPhone">휴대전화번호</Label>
@@ -396,6 +433,17 @@ const TeamManagement = () => {
                 value={editData.phone}
                 onChange={(e) => setEditData(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="010-1234-5678"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="editPassword">새 비밀번호 (변경시에만 입력)</Label>
+              <Input
+                id="editPassword"
+                type="password"
+                value={editData.password}
+                onChange={(e) => setEditData(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="4자 이상의 비밀번호를 입력하세요"
               />
             </div>
             
