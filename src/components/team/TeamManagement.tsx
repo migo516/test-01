@@ -25,7 +25,9 @@ const TeamManagement = () => {
   const [loading, setLoading] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [profileToDelete, setProfileToDelete] = useState<Profile | null>(null);
   const [registerData, setRegisterData] = useState({
     name: '',
     email: '',
@@ -171,6 +173,11 @@ const TeamManagement = () => {
     setIsEditModalOpen(true);
   };
 
+  const openDeleteModal = (profile: Profile) => {
+    setProfileToDelete(profile);
+    setIsDeleteModalOpen(true);
+  };
+
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
       const { error } = await supabase
@@ -188,20 +195,18 @@ const TeamManagement = () => {
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`정말로 ${userName}님을 삭제하시겠습니까?`)) {
-      return;
-    }
+  const handleDeleteUser = async () => {
+    if (!profileToDelete) return;
 
     setLoading(true);
     try {
-      console.log('삭제 시작:', userId, userName);
+      console.log('삭제 시작:', profileToDelete.id, profileToDelete.name);
       
       // 프로필 삭제
       const { error } = await supabase
         .from('profiles')
         .delete()
-        .eq('id', userId);
+        .eq('id', profileToDelete.id);
 
       if (error) {
         console.error('삭제 오류:', error);
@@ -209,7 +214,10 @@ const TeamManagement = () => {
       }
       
       console.log('삭제 성공');
-      toast.success(`${userName}님이 삭제되었습니다.`);
+      toast.success(`${profileToDelete.name}님이 삭제되었습니다.`);
+      
+      setIsDeleteModalOpen(false);
+      setProfileToDelete(null);
       
       // 목록 새로고침
       await fetchProfiles();
@@ -297,7 +305,7 @@ const TeamManagement = () => {
                     variant="ghost"
                     size="sm"
                     className="h-8 w-8 p-0 hover:bg-red-100"
-                    onClick={() => handleDeleteUser(profile.id, profile.name)}
+                    onClick={() => openDeleteModal(profile)}
                     disabled={loading}
                   >
                     <Trash2 className="w-4 h-4 text-red-600" />
@@ -465,6 +473,42 @@ const TeamManagement = () => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 삭제 확인 모달 */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>사원 삭제 확인</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              정말로 <strong>{profileToDelete?.name}</strong>님을 삭제하시겠습니까?
+            </p>
+            <p className="text-sm text-red-600">
+              이 작업은 되돌릴 수 없습니다.
+            </p>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={loading}
+              >
+                취소
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteUser}
+                disabled={loading}
+              >
+                {loading ? '삭제 중...' : '삭제'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

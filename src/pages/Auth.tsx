@@ -39,7 +39,18 @@ const Auth = () => {
       toast.success('로그인 성공!');
       navigate('/');
     } catch (error: any) {
-      toast.error(error.message || '로그인에 실패했습니다.');
+      console.error('로그인 오류:', error);
+      
+      // 더 구체적인 오류 메시지 제공
+      if (error.message?.includes('Invalid login credentials')) {
+        toast.error('이메일 또는 비밀번호가 올바르지 않습니다.');
+      } else if (error.message?.includes('Email not confirmed')) {
+        toast.error('이메일 인증이 필요합니다. 이메일을 확인해주세요.');
+      } else if (error.message?.includes('Too many requests')) {
+        toast.error('너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.');
+      } else {
+        toast.error(error.message || '로그인에 실패했습니다.');
+      }
     } finally {
       setLoading(false);
     }
@@ -67,7 +78,16 @@ const Auth = () => {
       await signUp(signUpData.email, signUpData.password, signUpData.name);
       toast.success('회원가입이 완료되었습니다! 로그인해주세요.');
     } catch (error: any) {
-      toast.error(error.message || '회원가입에 실패했습니다.');
+      console.error('회원가입 오류:', error);
+      
+      // 더 구체적인 오류 메시지 제공
+      if (error.message?.includes('User already registered')) {
+        toast.error('이미 등록된 이메일입니다.');
+      } else if (error.message?.includes('Password should be at least')) {
+        toast.error('비밀번호는 6자 이상이어야 합니다.');
+      } else {
+        toast.error(error.message || '회원가입에 실패했습니다.');
+      }
     } finally {
       setLoading(false);
     }
