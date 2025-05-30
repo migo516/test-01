@@ -128,14 +128,14 @@ const TeamManagement = () => {
   const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedProfile || !editData.name) {
-      toast.error('이름을 입력해주세요.');
+    if (!selectedProfile || !editData.name || !editData.email) {
+      toast.error('이름과 이메일을 입력해주세요.');
       return;
     }
 
     setLoading(true);
     try {
-      // 프로필 정보만 업데이트 (이메일, 비밀번호는 보안상 제외)
+      // 프로필 정보 업데이트
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
@@ -194,20 +194,23 @@ const TeamManagement = () => {
       return;
     }
 
+    setLoading(true);
     try {
-      // 프로필 정보를 삭제하는 대신 비활성화 처리
+      // 실제로 프로필을 삭제
       const { error } = await supabase
         .from('profiles')
-        .update({ role: 'deleted' })
+        .delete()
         .eq('id', userId);
 
       if (error) throw error;
       
-      toast.success(`${userName}님이 비활성화되었습니다.`);
+      toast.success(`${userName}님이 삭제되었습니다.`);
       fetchProfiles();
     } catch (error) {
       console.error('사원 삭제 실패:', error);
       toast.error('사원 삭제에 실패했습니다.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -216,7 +219,6 @@ const TeamManagement = () => {
       case 'admin': return 'bg-red-100 text-red-800';
       case 'manager': return 'bg-blue-100 text-blue-800';
       case 'user': return 'bg-green-100 text-green-800';
-      case 'deleted': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -226,13 +228,9 @@ const TeamManagement = () => {
       case 'admin': return '관리자';
       case 'manager': return '매니저';
       case 'user': return '일반 사용자';
-      case 'deleted': return '비활성화';
       default: return '사용자';
     }
   };
-
-  // 삭제된 사용자 제외하고 표시
-  const activeProfiles = profiles.filter(profile => profile.role !== 'deleted');
 
   return (
     <div className="space-y-6">
@@ -248,7 +246,7 @@ const TeamManagement = () => {
       </div>
 
       <div className="grid gap-4">
-        {activeProfiles.map((profile) => (
+        {profiles.map((profile) => (
           <Card key={profile.id}>
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
@@ -293,6 +291,7 @@ const TeamManagement = () => {
                     size="sm"
                     className="h-8 w-8 p-0 hover:bg-red-100"
                     onClick={() => handleDeleteUser(profile.id, profile.name)}
+                    disabled={loading}
                   >
                     <Trash2 className="w-4 h-4 text-red-600" />
                   </Button>
@@ -403,6 +402,18 @@ const TeamManagement = () => {
             </div>
 
             <div>
+              <Label htmlFor="editEmail">이메일 *</Label>
+              <Input
+                id="editEmail"
+                type="email"
+                value={editData.email}
+                onChange={(e) => setEditData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="이메일을 입력하세요"
+                required
+              />
+            </div>
+
+            <div>
               <Label htmlFor="editPhone">휴대전화번호</Label>
               <Input
                 id="editPhone"
@@ -410,6 +421,17 @@ const TeamManagement = () => {
                 value={editData.phone}
                 onChange={(e) => setEditData(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="010-1234-5678"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="editPassword">새 비밀번호 (선택사항)</Label>
+              <Input
+                id="editPassword"
+                type="password"
+                value={editData.password}
+                onChange={(e) => setEditData(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="변경할 비밀번호를 입력하세요"
               />
             </div>
             
