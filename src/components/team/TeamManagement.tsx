@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -196,19 +195,27 @@ const TeamManagement = () => {
 
     setLoading(true);
     try {
-      // 실제로 프로필을 삭제
+      console.log('삭제 시작:', userId, userName);
+      
+      // 프로필 삭제
       const { error } = await supabase
         .from('profiles')
         .delete()
         .eq('id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('삭제 오류:', error);
+        throw error;
+      }
       
+      console.log('삭제 성공');
       toast.success(`${userName}님이 삭제되었습니다.`);
-      fetchProfiles();
-    } catch (error) {
+      
+      // 목록 새로고침
+      await fetchProfiles();
+    } catch (error: any) {
       console.error('사원 삭제 실패:', error);
-      toast.error('사원 삭제에 실패했습니다.');
+      toast.error(`사원 삭제에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
     } finally {
       setLoading(false);
     }
