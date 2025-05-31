@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,8 +37,6 @@ const TeamManagement = () => {
   });
   const [editData, setEditData] = useState({
     name: '',
-    email: '',
-    password: '',
     phone: '',
     role: 'user',
   });
@@ -130,13 +127,15 @@ const TeamManagement = () => {
   const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedProfile || !editData.name || !editData.email) {
-      toast.error('이름과 이메일을 입력해주세요.');
+    if (!selectedProfile || !editData.name) {
+      toast.error('이름을 입력해주세요.');
       return;
     }
 
     setLoading(true);
     try {
+      console.log('수정 시작:', selectedProfile.id, editData);
+      
       // 프로필 정보 업데이트
       const { error: profileError } = await supabase
         .from('profiles')
@@ -147,13 +146,19 @@ const TeamManagement = () => {
         })
         .eq('id', selectedProfile.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('프로필 업데이트 오류:', profileError);
+        throw profileError;
+      }
 
+      console.log('수정 성공');
       toast.success('사원 정보가 성공적으로 수정되었습니다.');
       
       setIsEditModalOpen(false);
       setSelectedProfile(null);
-      fetchProfiles();
+      
+      // 목록 새로고침
+      await fetchProfiles();
     } catch (error: any) {
       console.error('사원 수정 실패:', error);
       toast.error(error.message || '사원 수정에 실패했습니다.');
@@ -166,8 +171,6 @@ const TeamManagement = () => {
     setSelectedProfile(profile);
     setEditData({
       name: profile.name,
-      email: '',
-      password: '',
       phone: profile.phone || '',
       role: profile.role,
     });
@@ -451,18 +454,6 @@ const TeamManagement = () => {
             </div>
 
             <div>
-              <Label htmlFor="editEmail">이메일 *</Label>
-              <Input
-                id="editEmail"
-                type="email"
-                value={editData.email}
-                onChange={(e) => setEditData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="이메일을 입력하세요"
-                required
-              />
-            </div>
-
-            <div>
               <Label htmlFor="editPhone">휴대전화번호</Label>
               <Input
                 id="editPhone"
@@ -470,17 +461,6 @@ const TeamManagement = () => {
                 value={editData.phone}
                 onChange={(e) => setEditData(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="010-1234-5678"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="editPassword">새 비밀번호 (선택사항)</Label>
-              <Input
-                id="editPassword"
-                type="password"
-                value={editData.password}
-                onChange={(e) => setEditData(prev => ({ ...prev, password: e.target.value }))}
-                placeholder="변경할 비밀번호를 입력하세요"
               />
             </div>
             
