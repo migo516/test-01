@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,8 +71,8 @@ const TeamManagement = () => {
       return;
     }
 
-    if (registerData.password.length < 4) {
-      toast.error('비밀번호는 4자 이상이어야 합니다.');
+    if (registerData.password.length < 6) {
+      toast.error('비밀번호는 6자 이상이어야 합니다.');
       return;
     }
 
@@ -201,6 +202,39 @@ const TeamManagement = () => {
     setLoading(true);
     try {
       console.log('삭제 시작:', profileToDelete.id, profileToDelete.name);
+      
+      // 먼저 해당 사용자에게 배정된 모든 업무의 배정을 해제
+      const { error: unassignError } = await supabase
+        .from('tasks')
+        .update({ assignee_id: null })
+        .eq('assignee_id', profileToDelete.id);
+
+      if (unassignError) {
+        console.error('업무 배정 해제 오류:', unassignError);
+        throw unassignError;
+      }
+
+      // 서브태스크 배정도 해제
+      const { error: unassignSubTaskError } = await supabase
+        .from('sub_tasks')
+        .update({ assignee_id: null })
+        .eq('assignee_id', profileToDelete.id);
+
+      if (unassignSubTaskError) {
+        console.error('서브태스크 배정 해제 오류:', unassignSubTaskError);
+        throw unassignSubTaskError;
+      }
+
+      // 댓글 삭제 (작성자가 삭제되는 사용자인 경우)
+      const { error: deleteCommentsError } = await supabase
+        .from('comments')
+        .delete()
+        .eq('author_id', profileToDelete.id);
+
+      if (deleteCommentsError) {
+        console.error('댓글 삭제 오류:', deleteCommentsError);
+        throw deleteCommentsError;
+      }
       
       // 프로필 삭제
       const { error } = await supabase
@@ -366,7 +400,7 @@ const TeamManagement = () => {
                 type="password"
                 value={registerData.password}
                 onChange={(e) => setRegisterData(prev => ({ ...prev, password: e.target.value }))}
-                placeholder="4자 이상의 비밀번호를 입력하세요"
+                placeholder="6자 이상의 비밀번호를 입력하세요"
                 required
               />
             </div>
@@ -488,7 +522,7 @@ const TeamManagement = () => {
               정말로 <strong>{profileToDelete?.name}</strong>님을 삭제하시겠습니까?
             </p>
             <p className="text-sm text-red-600">
-              이 작업은 되돌릴 수 없습니다.
+              이 작업은 되돌릴 수 없습니다. 해당 사원에게 배정된 모든 업무의 배정이 해제되고, 작성한 댓글이 삭제됩니다.
             </p>
             
             <div className="flex justify-end space-x-2 pt-4">
