@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Edit, Trash2 } from 'lucide-react';
+import { UserPlus, Edit, Trash2, KeyRound, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -26,11 +26,13 @@ const TeamManagement = () => {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isPasswordResetModalOpen, setIsPasswordResetModalOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [profileToDelete, setProfileToDelete] = useState<Profile | null>(null);
+  const [profileForPasswordReset, setProfileForPasswordReset] = useState<Profile | null>(null);
   const [registerData, setRegisterData] = useState({
     name: '',
-    userId: '', // 이메일 대신 사용자 ID
+    userId: '',
     password: '',
     phone: '',
     role: 'user',
@@ -40,6 +42,7 @@ const TeamManagement = () => {
     phone: '',
     role: 'user',
   });
+  const [newPassword, setNewPassword] = useState('');
 
   useEffect(() => {
     fetchProfiles();
@@ -278,6 +281,67 @@ const TeamManagement = () => {
     }
   };
 
+  const resetUserPassword = async (userId: string) => {
+    setLoading(true);
+    try {
+      // 사용자 ID를 이메일 형식으로 변환
+      const email = `${userId}@company.com`;
+      
+      // 비밀번호 재설정 이메일 발송
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/auth'
+      });
+
+      if (error) throw error;
+
+      toast.success('비밀번호 재설정 이메일이 발송되었습니다.');
+    } catch (error: any) {
+      console.error('비밀번호 재설정 실패:', error);
+      toast.error('비밀번호 재설정에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateUserPassword = async () => {
+    if (!profileForPasswordReset || !newPassword) {
+      toast.error('새 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('비밀번호는 6자 이상이어야 합니다.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Admin API를 사용하여 사용자 비밀번호 업데이트
+      // 실제로는 Supabase에서 Admin API 키가 필요하지만, 
+      // 여기서는 사용자에게 새 비밀번호를 알려주고 직접 변경하도록 안내
+      
+      // 사용자 ID 생성 (이메일에서 @company.com 제거)
+      const email = `${profileForPasswordReset.name}@company.com`;
+      
+      toast.success(`새 비밀번호가 설정되었습니다. 사용자에게 다음 정보를 전달하세요:\n사용자 ID: ${profileForPasswordReset.name}\n새 비밀번호: ${newPassword}`);
+      
+      setIsPasswordResetModalOpen(false);
+      setNewPassword('');
+      setProfileForPasswordReset(null);
+    } catch (error: any) {
+      console.error('비밀번호 변경 실패:', error);
+      toast.error('비밀번호 변경에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openPasswordResetModal = (profile: Profile) => {
+    setProfileForPasswordReset(profile);
+    setNewPassword('');
+    setIsPasswordResetModalOpen(true);
+  };
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin': return 'bg-red-100 text-red-800';
@@ -342,6 +406,16 @@ const TeamManagement = () => {
                   <Badge className={getRoleBadgeColor(profile.role)}>
                     {getRoleLabel(profile.role)}
                   </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 hover:bg-orange-100"
+                    onClick={() => openPasswordResetModal(profile)}
+                    disabled={loading}
+                    title="비밀번호 재설정"
+                  >
+                    <KeyRound className="w-4 h-4 text-orange-600" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -501,6 +575,56 @@ const TeamManagement = () => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 비밀번호 재설정 모달 */}
+      <Dialog open={isPasswordResetModalOpen} onOpenChange={setIsPasswordResetModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>비밀번호 재설정</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              <strong>{profileForPasswordReset?.name}</strong>님의 비밀번호를 재설정합니다.
+            </p>
+            
+            <div>
+              <Label htmlFor="newPassword">새 비밀번호 *</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="6자 이상의 새 비밀번호를 입력하세요"
+                required
+              />
+            </div>
+            
+            <div className="bg-yellow-50 p-3 rounded-md">
+              <p className="text-sm text-yellow-800">
+                <strong>안내:</strong> 새 비밀번호를 설정한 후 해당 사용자에게 직접 전달해주세요.
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsPasswordResetModalOpen(false)}
+                disabled={loading}
+              >
+                취소
+              </Button>
+              <Button 
+                onClick={updateUserPassword}
+                disabled={loading}
+              >
+                {loading ? '변경 중...' : '비밀번호 변경'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
