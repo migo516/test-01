@@ -30,7 +30,7 @@ const TeamManagement = () => {
   const [profileToDelete, setProfileToDelete] = useState<Profile | null>(null);
   const [registerData, setRegisterData] = useState({
     name: '',
-    email: '',
+    userId: '', // 이메일 대신 사용자 ID
     password: '',
     phone: '',
     role: 'user',
@@ -63,8 +63,8 @@ const TeamManagement = () => {
   const handleRegisterUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!registerData.name || !registerData.email || !registerData.password) {
-      toast.error('이름, 이메일, 비밀번호를 입력해주세요.');
+    if (!registerData.name || !registerData.userId || !registerData.password) {
+      toast.error('이름, 사용자 ID, 비밀번호를 입력해주세요.');
       return;
     }
 
@@ -73,11 +73,20 @@ const TeamManagement = () => {
       return;
     }
 
+    // 사용자 ID에 공백이나 특수문자가 있는지 확인
+    if (!/^[a-zA-Z0-9가-힣]+$/.test(registerData.userId)) {
+      toast.error('사용자 ID는 영문, 숫자, 한글만 사용할 수 있습니다.');
+      return;
+    }
+
     setLoading(true);
     try {
-      // 일반 회원가입 API 사용
+      // 사용자 ID를 이메일 형식으로 변환
+      const email = `${registerData.userId}@company.com`;
+      
+      // 회원가입 API 사용
       const { data: { user }, error: signUpError } = await supabase.auth.signUp({
-        email: registerData.email,
+        email: email,
         password: registerData.password,
         options: {
           data: {
@@ -101,7 +110,6 @@ const TeamManagement = () => {
 
         if (updateError) {
           console.error('프로필 업데이트 실패:', updateError);
-          // 프로필 업데이트 실패해도 회원가입은 성공했으므로 성공 메시지 표시
         }
       }
 
@@ -109,7 +117,7 @@ const TeamManagement = () => {
       
       setRegisterData({
         name: '',
-        email: '',
+        userId: '',
         password: '',
         phone: '',
         role: 'user',
@@ -118,7 +126,11 @@ const TeamManagement = () => {
       fetchProfiles();
     } catch (error: any) {
       console.error('사원 등록 실패:', error);
-      toast.error(error.message || '사원 등록에 실패했습니다.');
+      if (error.message?.includes('User already registered')) {
+        toast.error('이미 등록된 사용자 ID입니다.');
+      } else {
+        toast.error(error.message || '사원 등록에 실패했습니다.');
+      }
     } finally {
       setLoading(false);
     }
@@ -374,15 +386,17 @@ const TeamManagement = () => {
             </div>
             
             <div>
-              <Label htmlFor="email">이메일 *</Label>
+              <Label htmlFor="userId">사용자 ID *</Label>
               <Input
-                id="email"
-                type="email"
-                value={registerData.email}
-                onChange={(e) => setRegisterData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="이메일을 입력하세요"
+                id="userId"
+                value={registerData.userId}
+                onChange={(e) => setRegisterData(prev => ({ ...prev, userId: e.target.value }))}
+                placeholder="로그인에 사용할 사용자 ID를 입력하세요 (영문, 숫자, 한글만)"
                 required
               />
+              <p className="text-sm text-gray-500 mt-1">
+                로그인 시 이 ID를 사용합니다 (예: 홍길동, user123)
+              </p>
             </div>
 
             <div>

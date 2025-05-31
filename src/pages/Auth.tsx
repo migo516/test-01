@@ -6,36 +6,31 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
 const Auth = () => {
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   const [signInData, setSignInData] = useState({
-    email: '',
+    userId: '',
     password: '',
-  });
-
-  const [signUpData, setSignUpData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
   });
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!signInData.email || !signInData.password) {
-      toast.error('이메일과 비밀번호를 입력해주세요.');
+    if (!signInData.userId || !signInData.password) {
+      toast.error('사용자 ID와 비밀번호를 입력해주세요.');
       return;
     }
 
     setLoading(true);
     try {
-      await signIn(signInData.email, signInData.password);
+      // 사용자 ID를 이메일 형식으로 변환
+      const email = `${signInData.userId}@company.com`;
+      
+      await signIn(email, signInData.password);
       toast.success('로그인 성공!');
       navigate('/');
     } catch (error: any) {
@@ -43,50 +38,13 @@ const Auth = () => {
       
       // 더 구체적인 오류 메시지 제공
       if (error.message?.includes('Invalid login credentials')) {
-        toast.error('이메일 또는 비밀번호가 올바르지 않습니다.');
+        toast.error('사용자 ID 또는 비밀번호가 올바르지 않습니다.');
       } else if (error.message?.includes('Email not confirmed')) {
-        toast.error('이메일 인증이 필요합니다. 이메일을 확인해주세요.');
+        toast.error('계정 인증이 필요합니다. 관리자에게 문의하세요.');
       } else if (error.message?.includes('Too many requests')) {
         toast.error('너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.');
       } else {
-        toast.error(error.message || '로그인에 실패했습니다.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!signUpData.name || !signUpData.email || !signUpData.password) {
-      toast.error('모든 필드를 입력해주세요.');
-      return;
-    }
-
-    if (signUpData.password !== signUpData.confirmPassword) {
-      toast.error('비밀번호가 일치하지 않습니다.');
-      return;
-    }
-
-    if (signUpData.password.length < 6) {
-      toast.error('비밀번호는 6자 이상이어야 합니다.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await signUp(signUpData.email, signUpData.password, signUpData.name);
-      toast.success('회원가입이 완료되었습니다! 로그인해주세요.');
-    } catch (error: any) {
-      console.error('회원가입 오류:', error);
-      
-      // 더 구체적인 오류 메시지 제공
-      if (error.message?.includes('User already registered')) {
-        toast.error('이미 등록된 이메일입니다.');
-      } else if (error.message?.includes('Password should be at least')) {
-        toast.error('비밀번호는 6자 이상이어야 합니다.');
-      } else {
-        toast.error(error.message || '회원가입에 실패했습니다.');
+        toast.error('로그인에 실패했습니다. 사용자 ID와 비밀번호를 확인해주세요.');
       }
     } finally {
       setLoading(false);
@@ -99,98 +57,37 @@ const Auth = () => {
         <CardHeader>
           <CardTitle className="text-center">업무 관리 시스템</CardTitle>
           <CardDescription className="text-center">
-            업무 관리 시스템에 로그인하세요
+            사용자 ID와 비밀번호로 로그인하세요
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">로그인</TabsTrigger>
-              <TabsTrigger value="signup">회원가입</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div>
-                  <Label htmlFor="signin-email">이메일</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    value={signInData.email}
-                    onChange={(e) => setSignInData(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="이메일을 입력하세요"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="signin-password">비밀번호</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    value={signInData.password}
-                    onChange={(e) => setSignInData(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="비밀번호를 입력하세요"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? '로그인 중...' : '로그인'}
-                </Button>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div>
-                  <Label htmlFor="signup-name">이름</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    value={signUpData.name}
-                    onChange={(e) => setSignUpData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="이름을 입력하세요"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="signup-email">이메일</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    value={signUpData.email}
-                    onChange={(e) => setSignUpData(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="이메일을 입력하세요"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="signup-password">비밀번호</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={signUpData.password}
-                    onChange={(e) => setSignUpData(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="비밀번호를 입력하세요 (6자 이상)"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="confirm-password">비밀번호 확인</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={signUpData.confirmPassword}
-                    onChange={(e) => setSignUpData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                    placeholder="비밀번호를 다시 입력하세요"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? '가입 중...' : '회원가입'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+          <form onSubmit={handleSignIn} className="space-y-4">
+            <div>
+              <Label htmlFor="signin-userId">사용자 ID</Label>
+              <Input
+                id="signin-userId"
+                type="text"
+                value={signInData.userId}
+                onChange={(e) => setSignInData(prev => ({ ...prev, userId: e.target.value }))}
+                placeholder="사용자 ID를 입력하세요"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="signin-password">비밀번호</Label>
+              <Input
+                id="signin-password"
+                type="password"
+                value={signInData.password}
+                onChange={(e) => setSignInData(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="비밀번호를 입력하세요"
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? '로그인 중...' : '로그인'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
