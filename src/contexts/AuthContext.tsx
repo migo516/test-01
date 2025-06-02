@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -102,8 +103,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      // 로그아웃 시도
+      const { error } = await supabase.auth.signOut();
+      
+      // 세션 오류가 발생해도 로컬 상태는 정리
+      if (error && !error.message.includes('session_not_found')) {
+        throw error;
+      }
+    } catch (error: any) {
+      // 세션이 이미 없는 경우는 무시하고 로컬 상태만 정리
+      if (!error.message?.includes('session_not_found')) {
+        console.error('Sign out error:', error);
+        throw error;
+      }
+    } finally {
+      // 항상 로컬 상태 정리
+      setUser(null);
+      setSession(null);
+      setUserProfile(null);
+      
+      // 로컬 스토리지에서도 세션 정보 제거
+      localStorage.removeItem('supabase.auth.token');
+    }
   };
 
   return (
