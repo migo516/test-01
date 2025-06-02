@@ -38,7 +38,9 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
   };
 
   const handleSubTaskChange = (subTaskId: string, completed: boolean) => {
+    console.log('세부 업무 체크박스 클릭:', subTaskId, completed);
     updateSubTask(task.id, subTaskId, completed);
+    toast.success(completed ? '세부 업무가 완료되었습니다.' : '세부 업무가 미완료로 변경되었습니다.');
   };
 
   const handleSaveEdit = () => {
@@ -102,7 +104,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start pr-8">
             {isEditing ? (
               <Input
                 value={editedTask.title}
@@ -110,9 +112,9 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                 className="text-xl font-bold"
               />
             ) : (
-              <DialogTitle className="text-xl font-bold">{task.title}</DialogTitle>
+              <DialogTitle className="text-xl font-bold pr-4">{task.title}</DialogTitle>
             )}
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 ml-4">
               {isEditing ? (
                 <>
                   <Button size="sm" onClick={handleSaveEdit}>
@@ -158,17 +160,18 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
             <div>
               <h3 className="font-semibold mb-3">세부 업무</h3>
               {task.subTasks.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {task.subTasks.map(subTask => (
-                    <div key={subTask.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <div key={subTask.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                       <Checkbox
                         checked={subTask.completed}
                         onCheckedChange={(checked) => handleSubTaskChange(subTask.id, !!checked)}
+                        className="flex-shrink-0"
                       />
-                      <span className={`flex-1 ${subTask.completed ? 'line-through text-gray-500' : ''}`}>
+                      <span className={`flex-1 ${subTask.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                         {subTask.title}
                       </span>
-                      <span className="text-sm text-gray-600">{subTask.assignee}</span>
+                      <span className="text-sm text-gray-600 flex-shrink-0">{subTask.assignee}</span>
                     </div>
                   ))}
                 </div>
