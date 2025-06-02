@@ -81,6 +81,7 @@ export type Database = {
           completed: boolean
           created_at: string
           id: string
+          memo: string | null
           task_id: string
           title: string
           updated_at: string
@@ -90,6 +91,7 @@ export type Database = {
           completed?: boolean
           created_at?: string
           id?: string
+          memo?: string | null
           task_id: string
           title: string
           updated_at?: string
@@ -99,6 +101,7 @@ export type Database = {
           completed?: boolean
           created_at?: string
           id?: string
+          memo?: string | null
           task_id?: string
           title?: string
           updated_at?: string
