@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Task, useTaskContext } from '@/contexts/TaskContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -6,14 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { CalendarIcon, Edit, Trash2, Save, X } from 'lucide-react';
+import { CalendarIcon, Edit, Trash2, Save, X, Check, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -24,11 +22,13 @@ interface TaskDetailModalProps {
 }
 
 export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps) => {
-  const { addComment, updateSubTask, updateTask, deleteTask, teamMembers } = useTaskContext();
+  const { addComment, updateSubTask, updateSubTaskMemo, updateTask, deleteTask, teamMembers } = useTaskContext();
   const [newComment, setNewComment] = useState('');
-  const [currentUser] = useState('김개발'); // 실제로는 로그인된 사용자 정보
+  const [currentUser] = useState('김개발');
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
+  const [expandedMemos, setExpandedMemos] = useState<{ [key: string]: boolean }>({});
+  const [editingMemos, setEditingMemos] = useState<{ [key: string]: string }>({});
 
   const handleAddComment = () => {
     if (newComment.trim()) {
@@ -37,10 +37,64 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
     }
   };
 
-  const handleSubTaskChange = (subTaskId: string, completed: boolean) => {
-    console.log('세부 업무 체크박스 클릭:', subTaskId, completed);
-    updateSubTask(task.id, subTaskId, completed);
-    toast.success(completed ? '세부 업무가 완료되었습니다.' : '세부 업무가 미완료로 변경되었습니다.');
+  const handleCompleteSubTask = async (subTaskId: string) => {
+    try {
+      console.log('완료 버튼 클릭:', subTaskId);
+      await updateSubTask(task.id, subTaskId, true);
+      toast.success('세부 업무가 완료되었습니다.');
+    } catch (error) {
+      console.error('세부 업무 완료 실패:', error);
+      toast.error('세부 업무 완료에 실패했습니다.');
+    }
+  };
+
+  const handleUncompleteSubTask = async (subTaskId: string) => {
+    try {
+      console.log('미완료로 변경:', subTaskId);
+      await updateSubTask(task.id, subTaskId, false);
+      toast.success('세부 업무가 미완료로 변경되었습니다.');
+    } catch (error) {
+      console.error('세부 업무 상태 변경 실패:', error);
+      toast.error('세부 업무 상태 변경에 실패했습니다.');
+    }
+  };
+
+  const handleMemoToggle = (subTaskId: string) => {
+    setExpandedMemos(prev => ({
+      ...prev,
+      [subTaskId]: !prev[subTaskId]
+    }));
+  };
+
+  const handleMemoEdit = (subTaskId: string, currentMemo: string) => {
+    setEditingMemos(prev => ({
+      ...prev,
+      [subTaskId]: currentMemo
+    }));
+  };
+
+  const handleMemoSave = async (subTaskId: string) => {
+    try {
+      const memo = editingMemos[subTaskId] || '';
+      await updateSubTaskMemo(task.id, subTaskId, memo);
+      setEditingMemos(prev => {
+        const newState = { ...prev };
+        delete newState[subTaskId];
+        return newState;
+      });
+      toast.success('메모가 저장되었습니다.');
+    } catch (error) {
+      console.error('메모 저장 실패:', error);
+      toast.error('메모 저장에 실패했습니다.');
+    }
+  };
+
+  const handleMemoCancel = (subTaskId: string) => {
+    setEditingMemos(prev => {
+      const newState = { ...prev };
+      delete newState[subTaskId];
+      return newState;
+    });
   };
 
   const handleSaveEdit = () => {
@@ -160,18 +214,80 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
             <div>
               <h3 className="font-semibold mb-3">세부 업무</h3>
               {task.subTasks.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {task.subTasks.map(subTask => (
-                    <div key={subTask.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <Checkbox
-                        checked={subTask.completed}
-                        onCheckedChange={(checked) => handleSubTaskChange(subTask.id, !!checked)}
-                        className="flex-shrink-0"
-                      />
-                      <span className={`flex-1 ${subTask.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                        {subTask.title}
-                      </span>
-                      <span className="text-sm text-gray-600 flex-shrink-0">{subTask.assignee}</span>
+                    <div key={subTask.id} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-3 flex-1">
+                          <span className={`flex-1 ${subTask.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                            {subTask.title}
+                          </span>
+                          <span className="text-sm text-gray-600 flex-shrink-0">{subTask.assignee}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMemoToggle(subTask.id)}
+                          >
+                            <FileText className="w-4 h-4" />
+                          </Button>
+                          {subTask.completed ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUncompleteSubTask(subTask.id)}
+                            >
+                              미완료로 변경
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => handleCompleteSubTask(subTask.id)}
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              완료
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {expandedMemos[subTask.id] && (
+                        <div className="mt-3 pt-3 border-t">
+                          <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-sm font-medium">메모</h4>
+                            {editingMemos[subTask.id] !== undefined ? (
+                              <div className="flex space-x-2">
+                                <Button size="sm" onClick={() => handleMemoSave(subTask.id)}>
+                                  저장
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleMemoCancel(subTask.id)}>
+                                  취소
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button size="sm" variant="outline" onClick={() => handleMemoEdit(subTask.id, subTask.memo || '')}>
+                                편집
+                              </Button>
+                            )}
+                          </div>
+                          {editingMemos[subTask.id] !== undefined ? (
+                            <Textarea
+                              value={editingMemos[subTask.id]}
+                              onChange={(e) => setEditingMemos(prev => ({
+                                ...prev,
+                                [subTask.id]: e.target.value
+                              }))}
+                              placeholder="메모를 입력하세요..."
+                              rows={3}
+                            />
+                          ) : (
+                            <div className="text-sm text-gray-600 bg-white p-3 rounded border">
+                              {subTask.memo || '메모가 없습니다.'}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

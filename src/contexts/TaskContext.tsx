@@ -6,6 +6,7 @@ export interface SubTask {
   title: string;
   completed: boolean;
   assignee: string;
+  memo?: string;
 }
 
 export interface Comment {
@@ -44,6 +45,7 @@ interface TaskContextType {
   deleteTask: (taskId: string) => void;
   addComment: (taskId: string, content: string, author: string) => void;
   updateSubTask: (taskId: string, subTaskId: string, completed: boolean) => void;
+  updateSubTaskMemo: (taskId: string, subTaskId: string, memo: string) => void;
   refreshTasks: () => void;
   teamMembers: string[];
   deleteTeamMember: (memberId: string) => void;
@@ -94,7 +96,8 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
           id: st.id,
           title: st.title,
           completed: st.completed,
-          assignee: st.assignee_profile?.name || '미배정'
+          assignee: st.assignee_profile?.name || '미배정',
+          memo: st.memo || ''
         })),
         comments: (task.comments || []).map((c: any) => ({
           id: c.id,
@@ -238,15 +241,38 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 
   const updateSubTask = async (taskId: string, subTaskId: string, completed: boolean) => {
     try {
+      console.log('updateSubTask 호출됨:', { taskId, subTaskId, completed });
+      
       const { error } = await supabase
         .from('sub_tasks')
         .update({ completed })
         .eq('id', subTaskId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase 에러:', error);
+        throw error;
+      }
+      
+      console.log('Supabase 업데이트 성공');
       await loadTasks();
     } catch (error) {
       console.error('세부 업무 수정 실패:', error);
+      throw error;
+    }
+  };
+
+  const updateSubTaskMemo = async (taskId: string, subTaskId: string, memo: string) => {
+    try {
+      const { error } = await supabase
+        .from('sub_tasks')
+        .update({ memo })
+        .eq('id', subTaskId);
+
+      if (error) throw error;
+      await loadTasks();
+    } catch (error) {
+      console.error('세부 업무 메모 수정 실패:', error);
+      throw error;
     }
   };
 
@@ -265,6 +291,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       deleteTask,
       addComment,
       updateSubTask,
+      updateSubTaskMemo,
       refreshTasks,
       teamMembers,
       deleteTeamMember,
