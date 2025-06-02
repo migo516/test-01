@@ -316,21 +316,34 @@ const TeamManagement = () => {
 
     setLoading(true);
     try {
-      // Admin API를 사용하여 사용자 비밀번호 업데이트
-      // 실제로는 Supabase에서 Admin API 키가 필요하지만, 
-      // 여기서는 사용자에게 새 비밀번호를 알려주고 직접 변경하도록 안내
+      console.log('비밀번호 변경 시작:', profileForPasswordReset.id);
       
-      // 사용자 ID 생성 (이메일에서 @company.com 제거)
-      const email = `${profileForPasswordReset.name}@company.com`;
-      
-      toast.success(`새 비밀번호가 설정되었습니다. 사용자에게 다음 정보를 전달하세요:\n사용자 ID: ${profileForPasswordReset.name}\n새 비밀번호: ${newPassword}`);
+      // Edge Function 호출
+      const { data, error } = await supabase.functions.invoke('reset-user-password', {
+        body: {
+          userId: profileForPasswordReset.id,
+          newPassword: newPassword
+        }
+      });
+
+      if (error) {
+        console.error('Edge Function 호출 오류:', error);
+        throw error;
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      console.log('비밀번호 변경 성공');
+      toast.success(`${profileForPasswordReset.name}님의 비밀번호가 성공적으로 변경되었습니다.`);
       
       setIsPasswordResetModalOpen(false);
       setNewPassword('');
       setProfileForPasswordReset(null);
     } catch (error: any) {
       console.error('비밀번호 변경 실패:', error);
-      toast.error('비밀번호 변경에 실패했습니다.');
+      toast.error(error.message || '비밀번호 변경에 실패했습니다.');
     } finally {
       setLoading(false);
     }
