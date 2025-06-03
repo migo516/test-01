@@ -85,18 +85,26 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       : originalCompleted;
   };
 
-  const handleMemoToggle = (subTaskId: string) => {
+  const handleMemoToggle = (subTaskId: string, currentMemo: string) => {
     setExpandedMemos(prev => ({
       ...prev,
       [subTaskId]: !prev[subTaskId]
     }));
-  };
-
-  const handleMemoEdit = (subTaskId: string, currentMemo: string) => {
-    setEditingMemos(prev => ({
-      ...prev,
-      [subTaskId]: currentMemo
-    }));
+    
+    // 메모창이 열릴 때 즉시 편집 모드로 설정
+    if (!expandedMemos[subTaskId]) {
+      setEditingMemos(prev => ({
+        ...prev,
+        [subTaskId]: currentMemo || ''
+      }));
+    } else {
+      // 메모창이 닫힐 때 편집 모드 해제
+      setEditingMemos(prev => {
+        const newState = { ...prev };
+        delete newState[subTaskId];
+        return newState;
+      });
+    }
   };
 
   const handleMemoSave = async (subTaskId: string) => {
@@ -108,6 +116,10 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
         delete newState[subTaskId];
         return newState;
       });
+      setExpandedMemos(prev => ({
+        ...prev,
+        [subTaskId]: false
+      }));
       toast.success('메모가 저장되었습니다.');
     } catch (error) {
       console.error('메모 저장 실패:', error);
@@ -121,6 +133,10 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       delete newState[subTaskId];
       return newState;
     });
+    setExpandedMemos(prev => ({
+      ...prev,
+      [subTaskId]: false
+    }));
   };
 
   const handleCreateSubTask = async (data: SubTaskFormData) => {
@@ -368,7 +384,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleMemoToggle(subTask.id)}
+                            onClick={() => handleMemoToggle(subTask.id, subTask.memo || '')}
                           >
                             <FileText className="w-4 h-4 mr-1" />
                             메모
@@ -379,36 +395,26 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                           <div className="mt-3 pt-3 border-t">
                             <div className="flex justify-between items-center mb-2">
                               <h4 className="text-sm font-medium">협업 메모</h4>
-                              {editingMemos[subTask.id] !== undefined ? (
-                                <div className="flex space-x-2">
-                                  <Button size="sm" onClick={() => handleMemoSave(subTask.id)}>
-                                    저장
-                                  </Button>
-                                  <Button size="sm" variant="outline" onClick={() => handleMemoCancel(subTask.id)}>
-                                    취소
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button size="sm" variant="outline" onClick={() => handleMemoEdit(subTask.id, subTask.memo || '')}>
-                                  편집
+                              <div className="flex space-x-2">
+                                <Button size="sm" onClick={() => handleMemoSave(subTask.id)}>
+                                  <Save className="w-4 h-4 mr-1" />
+                                  저장
                                 </Button>
-                              )}
-                            </div>
-                            {editingMemos[subTask.id] !== undefined ? (
-                              <Textarea
-                                value={editingMemos[subTask.id]}
-                                onChange={(e) => setEditingMemos(prev => ({
-                                  ...prev,
-                                  [subTask.id]: e.target.value
-                                }))}
-                                placeholder="협업을 위한 메모를 입력하세요..."
-                                rows={3}
-                              />
-                            ) : (
-                              <div className="text-sm text-gray-600 bg-white p-3 rounded border">
-                                {subTask.memo || '메모가 없습니다.'}
+                                <Button size="sm" variant="outline" onClick={() => handleMemoCancel(subTask.id)}>
+                                  <X className="w-4 h-4 mr-1" />
+                                  취소
+                                </Button>
                               </div>
-                            )}
+                            </div>
+                            <Textarea
+                              value={editingMemos[subTask.id] || ''}
+                              onChange={(e) => setEditingMemos(prev => ({
+                                ...prev,
+                                [subTask.id]: e.target.value
+                              }))}
+                              placeholder="협업을 위한 메모를 입력하세요..."
+                              rows={3}
+                            />
                           </div>
                         )}
                       </div>
