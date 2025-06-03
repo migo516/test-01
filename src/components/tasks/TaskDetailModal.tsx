@@ -38,6 +38,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
   const [expandedMemos, setExpandedMemos] = useState<{ [key: string]: boolean }>({});
   const [editingMemos, setEditingMemos] = useState<{ [key: string]: string }>({});
   const [isAddingSubTask, setIsAddingSubTask] = useState(false);
+  const [localSubTaskStates, setLocalSubTaskStates] = useState<{ [key: string]: boolean }>({});
 
   const subTaskForm = useForm<SubTaskFormData>({
     defaultValues: {
@@ -55,14 +56,33 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
 
   const handleSubTaskStatusChange = async (subTaskId: string, completed: boolean) => {
     try {
+      // 즉시 로컬 상태 업데이트하여 UI에 반영
+      setLocalSubTaskStates(prev => ({
+        ...prev,
+        [subTaskId]: completed
+      }));
+
       console.log('세부 업무 상태 변경:', { subTaskId, completed });
       await updateSubTask(task.id, subTaskId, completed);
       const statusText = completed ? '완료' : '미완료';
       toast.success(`세부 업무가 ${statusText}로 변경되었습니다.`);
     } catch (error) {
+      // 오류 발생 시 로컬 상태를 원래대로 되돌림
+      setLocalSubTaskStates(prev => {
+        const newState = { ...prev };
+        delete newState[subTaskId];
+        return newState;
+      });
       console.error('세부 업무 상태 변경 실패:', error);
       toast.error('세부 업무 상태 변경에 실패했습니다.');
     }
+  };
+
+  // 세부 업무의 현재 완료 상태를 가져오는 함수 (로컬 상태 우선)
+  const getSubTaskCompletedStatus = (subTaskId: string, originalCompleted: boolean) => {
+    return localSubTaskStates.hasOwnProperty(subTaskId) 
+      ? localSubTaskStates[subTaskId] 
+      : originalCompleted;
   };
 
   const handleMemoToggle = (subTaskId: string) => {
@@ -304,92 +324,96 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
 
               {task.subTasks.length > 0 ? (
                 <div className="space-y-4">
-                  {task.subTasks.map(subTask => (
-                    <div key={subTask.id} className="border rounded-lg p-4 bg-gray-50">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1 mr-4">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <span className={`flex-1 font-medium ${subTask.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                              {subTask.title}
-                            </span>
-                            <Badge variant="outline" className="text-xs">
-                              담당자: {subTask.assignee}
-                            </Badge>
+                  {task.subTasks.map(subTask => {
+                    const isCompleted = getSubTaskCompletedStatus(subTask.id, subTask.completed);
+                    
+                    return (
+                      <div key={subTask.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1 mr-4">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <span className={`flex-1 font-medium ${isCompleted ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                                {subTask.title}
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                담당자: {subTask.assignee}
+                              </Badge>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-4">
+                                <span className="text-sm font-medium text-gray-700">진행 상태:</span>
+                                <RadioGroup
+                                  value={isCompleted ? 'completed' : 'incomplete'}
+                                  onValueChange={(value) => handleSubTaskStatusChange(subTask.id, value === 'completed')}
+                                  className="flex space-x-4"
+                                >
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="incomplete" id={`incomplete-${subTask.id}`} />
+                                    <label htmlFor={`incomplete-${subTask.id}`} className="text-sm text-gray-600">
+                                      미완료
+                                    </label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="completed" id={`completed-${subTask.id}`} />
+                                    <label htmlFor={`completed-${subTask.id}`} className="text-sm text-gray-600">
+                                      완료
+                                    </label>
+                                  </div>
+                                </RadioGroup>
+                              </div>
+                            </div>
                           </div>
                           
-                          <div className="space-y-2">
-                            <div className="flex items-center space-x-4">
-                              <span className="text-sm font-medium text-gray-700">진행 상태:</span>
-                              <RadioGroup
-                                value={subTask.completed ? 'completed' : 'incomplete'}
-                                onValueChange={(value) => handleSubTaskStatusChange(subTask.id, value === 'completed')}
-                                className="flex space-x-4"
-                              >
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="incomplete" id={`incomplete-${subTask.id}`} />
-                                  <label htmlFor={`incomplete-${subTask.id}`} className="text-sm text-gray-600">
-                                    미완료
-                                  </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="completed" id={`completed-${subTask.id}`} />
-                                  <label htmlFor={`completed-${subTask.id}`} className="text-sm text-gray-600">
-                                    완료
-                                  </label>
-                                </div>
-                              </RadioGroup>
-                            </div>
-                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMemoToggle(subTask.id)}
+                          >
+                            <FileText className="w-4 h-4 mr-1" />
+                            메모
+                          </Button>
                         </div>
                         
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleMemoToggle(subTask.id)}
-                        >
-                          <FileText className="w-4 h-4 mr-1" />
-                          메모
-                        </Button>
-                      </div>
-                      
-                      {expandedMemos[subTask.id] && (
-                        <div className="mt-3 pt-3 border-t">
-                          <div className="flex justify-between items-center mb-2">
-                            <h4 className="text-sm font-medium">협업 메모</h4>
+                        {expandedMemos[subTask.id] && (
+                          <div className="mt-3 pt-3 border-t">
+                            <div className="flex justify-between items-center mb-2">
+                              <h4 className="text-sm font-medium">협업 메모</h4>
+                              {editingMemos[subTask.id] !== undefined ? (
+                                <div className="flex space-x-2">
+                                  <Button size="sm" onClick={() => handleMemoSave(subTask.id)}>
+                                    저장
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => handleMemoCancel(subTask.id)}>
+                                    취소
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button size="sm" variant="outline" onClick={() => handleMemoEdit(subTask.id, subTask.memo || '')}>
+                                  편집
+                                </Button>
+                              )}
+                            </div>
                             {editingMemos[subTask.id] !== undefined ? (
-                              <div className="flex space-x-2">
-                                <Button size="sm" onClick={() => handleMemoSave(subTask.id)}>
-                                  저장
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleMemoCancel(subTask.id)}>
-                                  취소
-                                </Button>
-                              </div>
+                              <Textarea
+                                value={editingMemos[subTask.id]}
+                                onChange={(e) => setEditingMemos(prev => ({
+                                  ...prev,
+                                  [subTask.id]: e.target.value
+                                }))}
+                                placeholder="협업을 위한 메모를 입력하세요..."
+                                rows={3}
+                              />
                             ) : (
-                              <Button size="sm" variant="outline" onClick={() => handleMemoEdit(subTask.id, subTask.memo || '')}>
-                                편집
-                              </Button>
+                              <div className="text-sm text-gray-600 bg-white p-3 rounded border">
+                                {subTask.memo || '메모가 없습니다.'}
+                              </div>
                             )}
                           </div>
-                          {editingMemos[subTask.id] !== undefined ? (
-                            <Textarea
-                              value={editingMemos[subTask.id]}
-                              onChange={(e) => setEditingMemos(prev => ({
-                                ...prev,
-                                [subTask.id]: e.target.value
-                              }))}
-                              placeholder="협업을 위한 메모를 입력하세요..."
-                              rows={3}
-                            />
-                          ) : (
-                            <div className="text-sm text-gray-600 bg-white p-3 rounded border">
-                              {subTask.memo || '메모가 없습니다.'}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-gray-500">세부 업무가 없습니다. 새 세부 업무를 추가해보세요.</p>
