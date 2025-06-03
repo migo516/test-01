@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Task, useTaskContext } from '@/contexts/TaskContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { CalendarIcon, Edit, Trash2, Save, X, Check, FileText, Plus } from 'lucide-react';
+import { CalendarIcon, Edit, Trash2, Save, X, FileText, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -53,22 +53,12 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
     }
   };
 
-  const handleCompleteSubTask = async (subTaskId: string) => {
+  const handleSubTaskStatusChange = async (subTaskId: string, completed: boolean) => {
     try {
-      console.log('완료 버튼 클릭:', subTaskId);
-      await updateSubTask(task.id, subTaskId, true);
-      toast.success('세부 업무가 완료되었습니다.');
-    } catch (error) {
-      console.error('세부 업무 완료 실패:', error);
-      toast.error('세부 업무 완료에 실패했습니다.');
-    }
-  };
-
-  const handleUncompleteSubTask = async (subTaskId: string) => {
-    try {
-      console.log('미완료로 변경:', subTaskId);
-      await updateSubTask(task.id, subTaskId, false);
-      toast.success('세부 업무가 미완료로 변경되었습니다.');
+      console.log('세부 업무 상태 변경:', { subTaskId, completed });
+      await updateSubTask(task.id, subTaskId, completed);
+      const statusText = completed ? '완료' : '미완료';
+      toast.success(`세부 업무가 ${statusText}로 변경되었습니다.`);
     } catch (error) {
       console.error('세부 업무 상태 변경 실패:', error);
       toast.error('세부 업무 상태 변경에 실패했습니다.');
@@ -316,41 +306,50 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                 <div className="space-y-4">
                   {task.subTasks.map(subTask => (
                     <div key={subTask.id} className="border rounded-lg p-4 bg-gray-50">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-3 flex-1">
-                          <span className={`flex-1 ${subTask.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                            {subTask.title}
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            담당자: {subTask.assignee}
-                          </Badge>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 mr-4">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <span className={`flex-1 font-medium ${subTask.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                              {subTask.title}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              담당자: {subTask.assignee}
+                            </Badge>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-4">
+                              <span className="text-sm font-medium text-gray-700">진행 상태:</span>
+                              <RadioGroup
+                                value={subTask.completed ? 'completed' : 'incomplete'}
+                                onValueChange={(value) => handleSubTaskStatusChange(subTask.id, value === 'completed')}
+                                className="flex space-x-4"
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="incomplete" id={`incomplete-${subTask.id}`} />
+                                  <label htmlFor={`incomplete-${subTask.id}`} className="text-sm text-gray-600">
+                                    미완료
+                                  </label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="completed" id={`completed-${subTask.id}`} />
+                                  <label htmlFor={`completed-${subTask.id}`} className="text-sm text-gray-600">
+                                    완료
+                                  </label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleMemoToggle(subTask.id)}
-                          >
-                            <FileText className="w-4 h-4" />
-                          </Button>
-                          {subTask.completed ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleUncompleteSubTask(subTask.id)}
-                            >
-                              미완료로 변경
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              onClick={() => handleCompleteSubTask(subTask.id)}
-                            >
-                              <Check className="w-4 h-4 mr-1" />
-                              완료
-                            </Button>
-                          )}
-                        </div>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleMemoToggle(subTask.id)}
+                        >
+                          <FileText className="w-4 h-4 mr-1" />
+                          메모
+                        </Button>
                       </div>
                       
                       {expandedMemos[subTask.id] && (
