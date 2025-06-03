@@ -46,6 +46,7 @@ interface TaskContextType {
   addComment: (taskId: string, content: string, author: string) => void;
   updateSubTask: (taskId: string, subTaskId: string, completed: boolean) => void;
   updateSubTaskMemo: (taskId: string, subTaskId: string, memo: string) => void;
+  addSubTask: (taskId: string, title: string, assignee: string) => void;
   refreshTasks: () => void;
   teamMembers: string[];
   deleteTeamMember: (memberId: string) => void;
@@ -276,6 +277,34 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const addSubTask = async (taskId: string, title: string, assignee: string) => {
+    try {
+      // 담당자 ID 찾기
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('name', assignee)
+        .single();
+
+      if (profileError) throw profileError;
+
+      const { error } = await supabase
+        .from('sub_tasks')
+        .insert({
+          task_id: taskId,
+          title,
+          assignee_id: profile.id,
+          completed: false
+        });
+
+      if (error) throw error;
+      await loadTasks();
+    } catch (error) {
+      console.error('세부 업무 추가 실패:', error);
+      throw error;
+    }
+  };
+
   return (
     <TaskContext.Provider value={{
       tasks,
@@ -292,6 +321,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       addComment,
       updateSubTask,
       updateSubTaskMemo,
+      addSubTask,
       refreshTasks,
       teamMembers,
       deleteTeamMember,

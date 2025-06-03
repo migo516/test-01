@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Task, useTaskContext } from '@/contexts/TaskContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -9,11 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { CalendarIcon, Edit, Trash2, Save, X, Check, FileText } from 'lucide-react';
+import { CalendarIcon, Edit, Trash2, Save, X, Check, FileText, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
 
 interface TaskDetailModalProps {
   task: Task;
@@ -21,14 +24,27 @@ interface TaskDetailModalProps {
   onClose: () => void;
 }
 
+interface SubTaskFormData {
+  title: string;
+  assignee: string;
+}
+
 export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps) => {
-  const { addComment, updateSubTask, updateSubTaskMemo, updateTask, deleteTask, teamMembers } = useTaskContext();
+  const { addComment, updateSubTask, updateSubTaskMemo, updateTask, deleteTask, teamMembers, addSubTask } = useTaskContext();
   const [newComment, setNewComment] = useState('');
   const [currentUser] = useState('김개발');
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
   const [expandedMemos, setExpandedMemos] = useState<{ [key: string]: boolean }>({});
   const [editingMemos, setEditingMemos] = useState<{ [key: string]: string }>({});
+  const [isAddingSubTask, setIsAddingSubTask] = useState(false);
+
+  const subTaskForm = useForm<SubTaskFormData>({
+    defaultValues: {
+      title: '',
+      assignee: teamMembers[0] || ''
+    }
+  });
 
   const handleAddComment = () => {
     if (newComment.trim()) {
@@ -95,6 +111,18 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       delete newState[subTaskId];
       return newState;
     });
+  };
+
+  const handleCreateSubTask = async (data: SubTaskFormData) => {
+    try {
+      await addSubTask(task.id, data.title, data.assignee);
+      subTaskForm.reset();
+      setIsAddingSubTask(false);
+      toast.success('세부 업무가 추가되었습니다.');
+    } catch (error) {
+      console.error('세부 업무 추가 실패:', error);
+      toast.error('세부 업무 추가에 실패했습니다.');
+    }
   };
 
   const handleSaveEdit = () => {
@@ -212,7 +240,78 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
             </div>
             
             <div>
-              <h3 className="font-semibold mb-3">세부 업무</h3>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-semibold">세부 업무</h3>
+                <Button size="sm" onClick={() => setIsAddingSubTask(true)}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  세부 업무 추가
+                </Button>
+              </div>
+
+              {isAddingSubTask && (
+                <div className="mb-4 p-4 border rounded-lg bg-gray-50">
+                  <h4 className="font-medium mb-3">새 세부 업무 추가</h4>
+                  <Form {...subTaskForm}>
+                    <form onSubmit={subTaskForm.handleSubmit(handleCreateSubTask)} className="space-y-3">
+                      <FormField
+                        control={subTaskForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>세부 업무 제목</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="세부 업무를 입력하세요..." 
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={subTaskForm.control}
+                        name="assignee"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>담당자</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="담당자를 선택하세요" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {teamMembers.map(member => (
+                                  <SelectItem key={member} value={member}>{member}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="flex space-x-2">
+                        <Button type="submit" size="sm">추가</Button>
+                        <Button 
+                          type="button" 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => {
+                            setIsAddingSubTask(false);
+                            subTaskForm.reset();
+                          }}
+                        >
+                          취소
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </div>
+              )}
+
               {task.subTasks.length > 0 ? (
                 <div className="space-y-4">
                   {task.subTasks.map(subTask => (
@@ -222,7 +321,9 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                           <span className={`flex-1 ${subTask.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
                             {subTask.title}
                           </span>
-                          <span className="text-sm text-gray-600 flex-shrink-0">{subTask.assignee}</span>
+                          <Badge variant="outline" className="text-xs">
+                            담당자: {subTask.assignee}
+                          </Badge>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Button
@@ -255,7 +356,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                       {expandedMemos[subTask.id] && (
                         <div className="mt-3 pt-3 border-t">
                           <div className="flex justify-between items-center mb-2">
-                            <h4 className="text-sm font-medium">메모</h4>
+                            <h4 className="text-sm font-medium">협업 메모</h4>
                             {editingMemos[subTask.id] !== undefined ? (
                               <div className="flex space-x-2">
                                 <Button size="sm" onClick={() => handleMemoSave(subTask.id)}>
@@ -278,7 +379,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                                 ...prev,
                                 [subTask.id]: e.target.value
                               }))}
-                              placeholder="메모를 입력하세요..."
+                              placeholder="협업을 위한 메모를 입력하세요..."
                               rows={3}
                             />
                           ) : (
@@ -292,7 +393,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500">세부 업무가 없습니다.</p>
+                <p className="text-gray-500">세부 업무가 없습니다. 새 세부 업무를 추가해보세요.</p>
               )}
             </div>
             
