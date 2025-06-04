@@ -111,15 +111,9 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
     try {
       const memo = editingMemos[subTaskId] || '';
       await updateSubTaskMemo(task.id, subTaskId, memo);
-      setEditingMemos(prev => {
-        const newState = { ...prev };
-        delete newState[subTaskId];
-        return newState;
-      });
-      setExpandedMemos(prev => ({
-        ...prev,
-        [subTaskId]: false
-      }));
+      
+      // 저장 후 메모창을 닫지 않고 저장된 내용을 표시
+      // editingMemos에서 해당 ID를 제거하지 않음
       toast.success('메모가 저장되었습니다.');
     } catch (error) {
       console.error('메모 저장 실패:', error);
@@ -128,14 +122,13 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
   };
 
   const handleMemoCancel = (subTaskId: string) => {
-    setEditingMemos(prev => {
-      const newState = { ...prev };
-      delete newState[subTaskId];
-      return newState;
-    });
-    setExpandedMemos(prev => ({
+    // 현재 저장된 메모로 되돌리기
+    const currentSubTask = task.subTasks.find(st => st.id === subTaskId);
+    const originalMemo = currentSubTask?.memo || '';
+    
+    setEditingMemos(prev => ({
       ...prev,
-      [subTaskId]: false
+      [subTaskId]: originalMemo
     }));
   };
 
@@ -342,6 +335,9 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                 <div className="space-y-4">
                   {task.subTasks.map(subTask => {
                     const isCompleted = getSubTaskCompletedStatus(subTask.id, subTask.completed);
+                    const currentMemo = editingMemos[subTask.id] !== undefined 
+                      ? editingMemos[subTask.id] 
+                      : subTask.memo || '';
                     
                     return (
                       <div key={subTask.id} className="border rounded-lg p-4 bg-gray-50">
@@ -407,7 +403,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                               </div>
                             </div>
                             <Textarea
-                              value={editingMemos[subTask.id] || ''}
+                              value={currentMemo}
                               onChange={(e) => setEditingMemos(prev => ({
                                 ...prev,
                                 [subTask.id]: e.target.value
