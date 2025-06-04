@@ -112,8 +112,12 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       const memo = editingMemos[subTaskId] || '';
       await updateSubTaskMemo(task.id, subTaskId, memo);
       
-      // 저장 후 메모창을 닫지 않고 저장된 내용을 표시
-      // editingMemos에서 해당 ID를 제거하지 않음
+      // 저장 후 editingMemos를 업데이트하여 저장된 내용이 즉시 반영되도록 함
+      setEditingMemos(prev => ({
+        ...prev,
+        [subTaskId]: memo
+      }));
+      
       toast.success('메모가 저장되었습니다.');
     } catch (error) {
       console.error('메모 저장 실패:', error);
