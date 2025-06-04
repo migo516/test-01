@@ -377,10 +377,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                                   <Save className="w-4 h-4 mr-1" />
                                   저장
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleMemoCancel(subTask.id)}>
-                                  <X className="w-4 h-4 mr-1" />
-                                  취소
-                                </Button>
+                                
                               </div>
                             </div>
                             <Textarea
