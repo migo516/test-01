@@ -35,10 +35,11 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
   const [currentUser] = useState('김개발');
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
-  const [expandedMemos, setExpandedMemos] = useState<{ [key: string]: boolean }>({});
-  const [editingMemos, setEditingMemos] = useState<{ [key: string]: string }>({});
   const [isAddingSubTask, setIsAddingSubTask] = useState(false);
   const [localSubTaskStates, setLocalSubTaskStates] = useState<{ [key: string]: boolean }>({});
+  
+  // 새로운 메모 관리 상태 - 간단하게 관리
+  const [memoInputs, setMemoInputs] = useState<{ [key: string]: string }>({});
 
   const subTaskForm = useForm<SubTaskFormData>({
     defaultValues: {
@@ -56,7 +57,6 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
 
   const handleSubTaskStatusChange = async (subTaskId: string, completed: boolean) => {
     try {
-      // 즉시 로컬 상태 업데이트하여 UI에 반영
       setLocalSubTaskStates(prev => ({
         ...prev,
         [subTaskId]: completed
@@ -67,7 +67,6 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       const statusText = completed ? '완료' : '미완료';
       toast.success(`세부 업무가 ${statusText}로 변경되었습니다.`);
     } catch (error) {
-      // 오류 발생 시 로컬 상태를 원래대로 되돌림
       setLocalSubTaskStates(prev => {
         const newState = { ...prev };
         delete newState[subTaskId];
@@ -78,40 +77,34 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
     }
   };
 
-  // 세부 업무의 현재 완료 상태를 가져오는 함수 (로컬 상태 우선)
   const getSubTaskCompletedStatus = (subTaskId: string, originalCompleted: boolean) => {
     return localSubTaskStates.hasOwnProperty(subTaskId) 
       ? localSubTaskStates[subTaskId] 
       : originalCompleted;
   };
 
-  const handleMemoToggle = (subTaskId: string, currentMemo: string) => {
-    setExpandedMemos(prev => ({
-      ...prev,
-      [subTaskId]: !prev[subTaskId]
-    }));
-    
-    // 메모창이 열릴 때 현재 저장된 메모를 편집 모드로 설정
-    if (!expandedMemos[subTaskId]) {
-      setEditingMemos(prev => ({
-        ...prev,
-        [subTaskId]: currentMemo || ''
-      }));
+  // 메모 입력 값 가져오기 (저장된 메모 또는 현재 입력 중인 값)
+  const getMemoValue = (subTaskId: string) => {
+    if (memoInputs.hasOwnProperty(subTaskId)) {
+      return memoInputs[subTaskId];
     }
+    const subTask = task.subTasks.find(st => st.id === subTaskId);
+    return subTask?.memo || '';
   };
 
+  // 메모 입력 값 변경
+  const handleMemoChange = (subTaskId: string, value: string) => {
+    setMemoInputs(prev => ({
+      ...prev,
+      [subTaskId]: value
+    }));
+  };
+
+  // 메모 저장
   const handleMemoSave = async (subTaskId: string) => {
     try {
-      const memo = editingMemos[subTaskId] || '';
+      const memo = getMemoValue(subTaskId);
       await updateSubTaskMemo(task.id, subTaskId, memo);
-      
-      // 저장 후 해당 세부업무의 메모를 업데이트
-      const updatedTask = { ...task };
-      const subTaskIndex = updatedTask.subTasks.findIndex(st => st.id === subTaskId);
-      if (subTaskIndex !== -1) {
-        updatedTask.subTasks[subTaskIndex].memo = memo;
-      }
-      
       toast.success('메모가 저장되었습니다.');
     } catch (error) {
       console.error('메모 저장 실패:', error);
@@ -322,10 +315,6 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                 <div className="space-y-4">
                   {task.subTasks.map(subTask => {
                     const isCompleted = getSubTaskCompletedStatus(subTask.id, subTask.completed);
-                    // 저장된 메모 또는 편집 중인 메모를 표시
-                    const displayMemo = editingMemos[subTask.id] !== undefined 
-                      ? editingMemos[subTask.id] 
-                      : subTask.memo || '';
                     
                     return (
                       <div key={subTask.id} className="border rounded-lg p-4 bg-gray-50">
@@ -364,39 +353,24 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                               </div>
                             </div>
                           </div>
-                          
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleMemoToggle(subTask.id, subTask.memo || '')}
-                          >
-                            <FileText className="w-4 h-4 mr-1" />
-                            메모
-                          </Button>
                         </div>
                         
-                        {expandedMemos[subTask.id] && (
-                          <div className="mt-3 pt-3 border-t">
-                            <div className="flex justify-between items-center mb-2">
-                              <h4 className="text-sm font-medium">협업 메모</h4>
-                              <div className="flex space-x-2">
-                                <Button size="sm" onClick={() => handleMemoSave(subTask.id)}>
-                                  <Save className="w-4 h-4 mr-1" />
-                                  저장
-                                </Button>
-                              </div>
-                            </div>
-                            <Textarea
-                              value={displayMemo}
-                              onChange={(e) => setEditingMemos(prev => ({
-                                ...prev,
-                                [subTask.id]: e.target.value
-                              }))}
-                              placeholder="협업을 위한 메모를 입력하세요..."
-                              rows={3}
-                            />
+                        {/* 새로운 간단한 메모 섹션 */}
+                        <div className="mt-3 pt-3 border-t">
+                          <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-sm font-medium">협업 메모</h4>
+                            <Button size="sm" onClick={() => handleMemoSave(subTask.id)}>
+                              <Save className="w-4 h-4 mr-1" />
+                              저장
+                            </Button>
                           </div>
-                        )}
+                          <Textarea
+                            value={getMemoValue(subTask.id)}
+                            onChange={(e) => handleMemoChange(subTask.id, e.target.value)}
+                            placeholder="협업을 위한 메모를 입력하세요..."
+                            rows={3}
+                          />
+                        </div>
                       </div>
                     );
                   })}
