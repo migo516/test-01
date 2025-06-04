@@ -91,19 +91,12 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       [subTaskId]: !prev[subTaskId]
     }));
     
-    // 메모창이 열릴 때 즉시 편집 모드로 설정
+    // 메모창이 열릴 때 현재 저장된 메모를 편집 모드로 설정
     if (!expandedMemos[subTaskId]) {
       setEditingMemos(prev => ({
         ...prev,
         [subTaskId]: currentMemo || ''
       }));
-    } else {
-      // 메모창이 닫힐 때 편집 모드 해제
-      setEditingMemos(prev => {
-        const newState = { ...prev };
-        delete newState[subTaskId];
-        return newState;
-      });
     }
   };
 
@@ -112,28 +105,11 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       const memo = editingMemos[subTaskId] || '';
       await updateSubTaskMemo(task.id, subTaskId, memo);
       
-      // 저장 후 editingMemos를 업데이트하여 저장된 내용이 즉시 반영되도록 함
-      setEditingMemos(prev => ({
-        ...prev,
-        [subTaskId]: memo
-      }));
-      
       toast.success('메모가 저장되었습니다.');
     } catch (error) {
       console.error('메모 저장 실패:', error);
       toast.error('메모 저장에 실패했습니다.');
     }
-  };
-
-  const handleMemoCancel = (subTaskId: string) => {
-    // 현재 저장된 메모로 되돌리기
-    const currentSubTask = task.subTasks.find(st => st.id === subTaskId);
-    const originalMemo = currentSubTask?.memo || '';
-    
-    setEditingMemos(prev => ({
-      ...prev,
-      [subTaskId]: originalMemo
-    }));
   };
 
   const handleCreateSubTask = async (data: SubTaskFormData) => {
@@ -339,6 +315,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                 <div className="space-y-4">
                   {task.subTasks.map(subTask => {
                     const isCompleted = getSubTaskCompletedStatus(subTask.id, subTask.completed);
+                    // 현재 저장된 메모를 표시하되, 편집 중인 경우 편집 중인 내용을 표시
                     const currentMemo = editingMemos[subTask.id] !== undefined 
                       ? editingMemos[subTask.id] 
                       : subTask.memo || '';
