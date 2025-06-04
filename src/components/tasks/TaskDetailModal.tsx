@@ -105,6 +105,13 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       const memo = editingMemos[subTaskId] || '';
       await updateSubTaskMemo(task.id, subTaskId, memo);
       
+      // 저장 후 해당 세부업무의 메모를 업데이트
+      const updatedTask = { ...task };
+      const subTaskIndex = updatedTask.subTasks.findIndex(st => st.id === subTaskId);
+      if (subTaskIndex !== -1) {
+        updatedTask.subTasks[subTaskIndex].memo = memo;
+      }
+      
       toast.success('메모가 저장되었습니다.');
     } catch (error) {
       console.error('메모 저장 실패:', error);
@@ -315,8 +322,8 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                 <div className="space-y-4">
                   {task.subTasks.map(subTask => {
                     const isCompleted = getSubTaskCompletedStatus(subTask.id, subTask.completed);
-                    // 현재 저장된 메모를 표시하되, 편집 중인 경우 편집 중인 내용을 표시
-                    const currentMemo = editingMemos[subTask.id] !== undefined 
+                    // 저장된 메모 또는 편집 중인 메모를 표시
+                    const displayMemo = editingMemos[subTask.id] !== undefined 
                       ? editingMemos[subTask.id] 
                       : subTask.memo || '';
                     
@@ -377,11 +384,10 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                                   <Save className="w-4 h-4 mr-1" />
                                   저장
                                 </Button>
-                                
                               </div>
                             </div>
                             <Textarea
-                              value={currentMemo}
+                              value={displayMemo}
                               onChange={(e) => setEditingMemos(prev => ({
                                 ...prev,
                                 [subTask.id]: e.target.value
