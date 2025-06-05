@@ -47,6 +47,8 @@ interface TaskContextType {
   updateSubTask: (taskId: string, subTaskId: string, completed: boolean) => void;
   updateSubTaskMemo: (taskId: string, subTaskId: string, memo: string) => void;
   addSubTask: (taskId: string, title: string, assignee: string) => void;
+  deleteSubTask: (taskId: string, subTaskId: string) => void;
+  updateSubTaskAssignee: (taskId: string, subTaskId: string, assignee: string) => void;
   refreshTasks: () => void;
   teamMembers: string[];
   deleteTeamMember: (memberId: string) => void;
@@ -305,6 +307,45 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const deleteSubTask = async (taskId: string, subTaskId: string) => {
+    try {
+      const { error } = await supabase
+        .from('sub_tasks')
+        .delete()
+        .eq('id', subTaskId);
+
+      if (error) throw error;
+      await loadTasks();
+    } catch (error) {
+      console.error('세부 업무 삭제 실패:', error);
+      throw error;
+    }
+  };
+
+  const updateSubTaskAssignee = async (taskId: string, subTaskId: string, assignee: string) => {
+    try {
+      // 담당자 ID 찾기
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('name', assignee)
+        .single();
+
+      if (profileError) throw profileError;
+
+      const { error } = await supabase
+        .from('sub_tasks')
+        .update({ assignee_id: profile.id })
+        .eq('id', subTaskId);
+
+      if (error) throw error;
+      await loadTasks();
+    } catch (error) {
+      console.error('세부 업무 담당자 변경 실패:', error);
+      throw error;
+    }
+  };
+
   return (
     <TaskContext.Provider value={{
       tasks,
@@ -322,6 +363,8 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       updateSubTask,
       updateSubTaskMemo,
       addSubTask,
+      deleteSubTask,
+      updateSubTaskAssignee,
       refreshTasks,
       teamMembers,
       deleteTeamMember,
