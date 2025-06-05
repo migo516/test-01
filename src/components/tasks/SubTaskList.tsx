@@ -82,12 +82,32 @@ export const SubTaskList = ({ taskId, subTasks, teamMembers }: SubTaskListProps)
 
   const handleDeleteSubTask = async (subTaskId: string) => {
     try {
+      // 임시 ID인지 확인 (서버에 저장되지 않은 새 항목)
+      if (subTaskId.startsWith('temp_')) {
+        // 임시 항목은 로컬에서만 제거
+        setLocalSubTasks(prev => prev.filter(st => st.id !== subTaskId));
+        toast.success('세부 업무가 삭제되었습니다.');
+        return;
+      }
+
+      // 실제 서버에 저장된 항목 삭제
+      const originalSubTasks = [...localSubTasks];
       setLocalSubTasks(prev => prev.filter(st => st.id !== subTaskId));
       
       await deleteSubTask(taskId, subTaskId);
       toast.success('세부 업무가 삭제되었습니다.');
     } catch (error) {
-      setLocalSubTasks(subTasks);
+      // 삭제 실패 시 해당 항목만 복원
+      const deletedSubTask = subTasks.find(st => st.id === subTaskId);
+      if (deletedSubTask) {
+        setLocalSubTasks(prev => {
+          const exists = prev.find(st => st.id === subTaskId);
+          if (!exists) {
+            return [...prev, deletedSubTask];
+          }
+          return prev;
+        });
+      }
       console.error('세부 업무 삭제 실패:', error);
       toast.error('세부 업무 삭제에 실패했습니다.');
     }
@@ -138,15 +158,25 @@ export const SubTaskList = ({ taskId, subTasks, teamMembers }: SubTaskListProps)
       
       setLocalSubTasks(prev => [...prev, newSubTask]);
       
-      await addSubTask(taskId, data.title, data.assignee);
-      setIsAddingSubTask(false);
-      toast.success('세부 업무가 추가되었습니다.');
+      try {
+        await addSubTask(taskId, data.title, data.assignee);
+        setIsAddingSubTask(false);
+        toast.success('세부 업무가 추가되었습니다.');
+      } catch (error) {
+        // 서버 저장 실패 시 임시 항목 제거
+        setLocalSubTasks(prev => prev.filter(st => st.id !== tempId));
+        throw error;
+      }
     } catch (error) {
-      setLocalSubTasks(prev => prev.filter(st => !st.id.startsWith('temp_')));
       console.error('세부 업무 추가 실패:', error);
       toast.error('세부 업무 추가에 실패했습니다.');
     }
   };
+
+  // subTasks prop이 변경되면 localSubTasks 업데이트 (서버에서 새 데이터가 온 경우)
+  useState(() => {
+    setLocalSubTasks(subTasks);
+  });
 
   return (
     <div>
