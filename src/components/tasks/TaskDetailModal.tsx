@@ -11,9 +11,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { CalendarIcon, Edit, Trash2, Save, X, Plus, UserCheck } from 'lucide-react';
+import { CalendarIcon, Edit, Trash2, Save, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
@@ -47,9 +48,12 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
   const [isAddingSubTask, setIsAddingSubTask] = useState(false);
-  const [localSubTaskStates, setLocalSubTaskStates] = useState<{ [key: string]: boolean }>({});
+  
+  // 즉시 UI 업데이트를 위한 로컬 상태들
   const [localSubTasks, setLocalSubTasks] = useState<SubTask[]>(task.subTasks);
+  const [localSubTaskStates, setLocalSubTaskStates] = useState<{ [key: string]: boolean }>({});
   const [localSubTaskAssignees, setLocalSubTaskAssignees] = useState<{ [key: string]: string }>({});
+  const [localSubTaskMemos, setLocalSubTaskMemos] = useState<{ [key: string]: string }>({});
 
   const subTaskForm = useForm<SubTaskFormData>({
     defaultValues: {
@@ -58,25 +62,40 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
     }
   });
 
-  const handleAddComment = () => {
+  // task가 변경될 때마다 로컬 상태 업데이트
+  useState(() => {
+    setLocalSubTasks(task.subTasks);
+    setLocalSubTaskStates({});
+    setLocalSubTaskAssignees({});
+    setLocalSubTaskMemos({});
+  });
+
+  const handleAddComment = async () => {
     if (newComment.trim()) {
-      addComment(task.id, newComment, currentUser);
-      setNewComment('');
+      try {
+        await addComment(task.id, newComment, currentUser);
+        setNewComment('');
+        toast.success('댓글이 추가되었습니다.');
+      } catch (error) {
+        console.error('댓글 추가 실패:', error);
+        toast.error('댓글 추가에 실패했습니다.');
+      }
     }
   };
 
   const handleSubTaskStatusChange = async (subTaskId: string, completed: boolean) => {
     try {
+      // 즉시 로컬 상태 업데이트
       setLocalSubTaskStates(prev => ({
         ...prev,
         [subTaskId]: completed
       }));
 
-      console.log('세부 업무 상태 변경:', { subTaskId, completed });
       await updateSubTask(task.id, subTaskId, completed);
       const statusText = completed ? '완료' : '미완료';
       toast.success(`세부 업무가 ${statusText}로 변경되었습니다.`);
     } catch (error) {
+      // 실패 시 롤백
       setLocalSubTaskStates(prev => {
         const newState = { ...prev };
         delete newState[subTaskId];
@@ -95,28 +114,38 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
 
   const handleMemoSave = async (subTaskId: string, memo: string) => {
     try {
+      // 즉시 로컬 상태 업데이트
+      setLocalSubTaskMemos(prev => ({
+        ...prev,
+        [subTaskId]: memo
+      }));
+
       await updateSubTaskMemo(task.id, subTaskId, memo);
       toast.success('메모가 저장되었습니다.');
     } catch (error) {
+      // 실패 시 롤백
+      setLocalSubTaskMemos(prev => {
+        const newState = { ...prev };
+        delete newState[subTaskId];
+        return newState;
+      });
       console.error('메모 저장 실패:', error);
       toast.error('메모 저장에 실패했습니다.');
     }
   };
 
   const handleDeleteSubTask = async (subTaskId: string) => {
-    if (confirm('정말로 이 세부 업무를 삭제하시겠습니까?')) {
-      try {
-        // 즉시 로컬 상태에서 제거
-        setLocalSubTasks(prev => prev.filter(st => st.id !== subTaskId));
-        
-        await deleteSubTask(task.id, subTaskId);
-        toast.success('세부 업무가 삭제되었습니다.');
-      } catch (error) {
-        // 실패 시 롤백
-        setLocalSubTasks(task.subTasks);
-        console.error('세부 업무 삭제 실패:', error);
-        toast.error('세부 업무 삭제에 실패했습니다.');
-      }
+    try {
+      // 즉시 로컬 상태에서 제거
+      setLocalSubTasks(prev => prev.filter(st => st.id !== subTaskId));
+      
+      await deleteSubTask(task.id, subTaskId);
+      toast.success('세부 업무가 삭제되었습니다.');
+    } catch (error) {
+      // 실패 시 롤백
+      setLocalSubTasks(task.subTasks);
+      console.error('세부 업무 삭제 실패:', error);
+      toast.error('세부 업무 삭제에 실패했습니다.');
     }
   };
 
@@ -148,22 +177,47 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       : originalAssignee;
   };
 
+  const getSubTaskMemo = (subTaskId: string, originalMemo: string) => {
+    return localSubTaskMemos.hasOwnProperty(subTaskId) 
+      ? localSubTaskMemos[subTaskId] 
+      : originalMemo;
+  };
+
   const handleCreateSubTask = async (data: SubTaskFormData) => {
     try {
+      // 임시 ID로 즉시 로컬 상태 업데이트
+      const tempId = `temp_${Date.now()}`;
+      const newSubTask: SubTask = {
+        id: tempId,
+        title: data.title,
+        assignee: data.assignee,
+        completed: false,
+        memo: ''
+      };
+      
+      setLocalSubTasks(prev => [...prev, newSubTask]);
+      
       await addSubTask(task.id, data.title, data.assignee);
       subTaskForm.reset();
       setIsAddingSubTask(false);
       toast.success('세부 업무가 추가되었습니다.');
     } catch (error) {
+      // 실패 시 롤백
+      setLocalSubTasks(prev => prev.filter(st => !st.id.startsWith('temp_')));
       console.error('세부 업무 추가 실패:', error);
       toast.error('세부 업무 추가에 실패했습니다.');
     }
   };
 
-  const handleSaveEdit = () => {
-    updateTask(task.id, editedTask);
-    setIsEditing(false);
-    toast.success('업무가 수정되었습니다.');
+  const handleSaveEdit = async () => {
+    try {
+      await updateTask(task.id, editedTask);
+      setIsEditing(false);
+      toast.success('업무가 수정되었습니다.');
+    } catch (error) {
+      console.error('업무 수정 실패:', error);
+      toast.error('업무 수정에 실패했습니다.');
+    }
   };
 
   const handleCancelEdit = () => {
@@ -171,11 +225,14 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
     setIsEditing(false);
   };
 
-  const handleDelete = () => {
-    if (confirm('정말로 이 업무를 삭제하시겠습니까?')) {
-      deleteTask(task.id);
+  const handleDelete = async () => {
+    try {
+      await deleteTask(task.id);
       onClose();
       toast.success('업무가 삭제되었습니다.');
+    } catch (error) {
+      console.error('업무 삭제 실패:', error);
+      toast.error('업무 삭제에 실패했습니다.');
     }
   };
 
@@ -249,10 +306,26 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                     <Edit className="w-4 h-4 mr-1" />
                     수정
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={handleDelete}>
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    삭제
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="destructive">
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        삭제
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>업무 삭제</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          정말로 이 업무를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>취소</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>삭제</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </>
               )}
             </div>
@@ -352,6 +425,7 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                   {localSubTasks.map(subTask => {
                     const isCompleted = getSubTaskCompletedStatus(subTask.id, subTask.completed);
                     const assignee = getSubTaskAssignee(subTask.id, subTask.assignee);
+                    const memo = getSubTaskMemo(subTask.id, subTask.memo || '');
                     
                     return (
                       <div key={subTask.id} className="border rounded-lg p-4 bg-gray-50">
@@ -362,14 +436,31 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                                 {subTask.title}
                               </span>
                               <div className="flex items-center space-x-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleDeleteSubTask(subTask.id)}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>세부 업무 삭제</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        정말로 이 세부 업무를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>취소</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeleteSubTask(subTask.id)}>
+                                        삭제
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </div>
                             </div>
                             
@@ -422,12 +513,23 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                           <div className="flex justify-between items-center mb-2">
                             <h4 className="text-sm font-medium">협업 메모</h4>
                           </div>
-                          <Textarea
-                            defaultValue={subTask.memo || ''}
-                            placeholder="협업을 위한 메모를 입력하세요..."
-                            onBlur={(e) => handleMemoSave(subTask.id, e.target.value)}
-                            rows={3}
-                          />
+                          <div className="space-y-2">
+                            <Textarea
+                              value={memo}
+                              onChange={(e) => setLocalSubTaskMemos(prev => ({
+                                ...prev,
+                                [subTask.id]: e.target.value
+                              }))}
+                              placeholder="협업을 위한 메모를 입력하세요..."
+                              rows={3}
+                            />
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleMemoSave(subTask.id, memo)}
+                            >
+                              메모 저장
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );
