@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Task, useTaskContext } from '@/contexts/TaskContext';
+import { Task, useTaskContext, SubTask } from '@/contexts/TaskContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -48,8 +48,8 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
   const [editedTask, setEditedTask] = useState(task);
   const [isAddingSubTask, setIsAddingSubTask] = useState(false);
   const [localSubTaskStates, setLocalSubTaskStates] = useState<{ [key: string]: boolean }>({});
-  const [memoValues, setMemoValues] = useState<{ [key: string]: string }>({});
-  const [editingAssignee, setEditingAssignee] = useState<{ [key: string]: boolean }>({});
+  const [localSubTasks, setLocalSubTasks] = useState<SubTask[]>(task.subTasks);
+  const [localSubTaskAssignees, setLocalSubTaskAssignees] = useState<{ [key: string]: string }>({});
 
   const subTaskForm = useForm<SubTaskFormData>({
     defaultValues: {
@@ -93,24 +93,8 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
       : originalCompleted;
   };
 
-  const handleMemoChange = (subTaskId: string, value: string) => {
-    setMemoValues(prev => ({
-      ...prev,
-      [subTaskId]: value
-    }));
-  };
-
-  const getMemoValue = (subTaskId: string) => {
-    if (memoValues.hasOwnProperty(subTaskId)) {
-      return memoValues[subTaskId];
-    }
-    const subTask = task.subTasks.find(st => st.id === subTaskId);
-    return subTask?.memo || '';
-  };
-
-  const handleMemoSave = async (subTaskId: string) => {
+  const handleMemoSave = async (subTaskId: string, memo: string) => {
     try {
-      const memo = getMemoValue(subTaskId);
       await updateSubTaskMemo(task.id, subTaskId, memo);
       toast.success('메모가 저장되었습니다.');
     } catch (error) {
@@ -122,9 +106,14 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
   const handleDeleteSubTask = async (subTaskId: string) => {
     if (confirm('정말로 이 세부 업무를 삭제하시겠습니까?')) {
       try {
+        // 즉시 로컬 상태에서 제거
+        setLocalSubTasks(prev => prev.filter(st => st.id !== subTaskId));
+        
         await deleteSubTask(task.id, subTaskId);
         toast.success('세부 업무가 삭제되었습니다.');
       } catch (error) {
+        // 실패 시 롤백
+        setLocalSubTasks(task.subTasks);
         console.error('세부 업무 삭제 실패:', error);
         toast.error('세부 업무 삭제에 실패했습니다.');
       }
@@ -133,13 +122,30 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
 
   const handleAssigneeChange = async (subTaskId: string, newAssignee: string) => {
     try {
+      // 즉시 로컬 상태 업데이트
+      setLocalSubTaskAssignees(prev => ({
+        ...prev,
+        [subTaskId]: newAssignee
+      }));
+      
       await updateSubTaskAssignee(task.id, subTaskId, newAssignee);
-      setEditingAssignee(prev => ({ ...prev, [subTaskId]: false }));
       toast.success('담당자가 변경되었습니다.');
     } catch (error) {
+      // 실패 시 롤백
+      setLocalSubTaskAssignees(prev => {
+        const newState = { ...prev };
+        delete newState[subTaskId];
+        return newState;
+      });
       console.error('담당자 변경 실패:', error);
       toast.error('담당자 변경에 실패했습니다.');
     }
+  };
+
+  const getSubTaskAssignee = (subTaskId: string, originalAssignee: string) => {
+    return localSubTaskAssignees.hasOwnProperty(subTaskId) 
+      ? localSubTaskAssignees[subTaskId] 
+      : originalAssignee;
   };
 
   const handleCreateSubTask = async (data: SubTaskFormData) => {
@@ -341,11 +347,11 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                 </div>
               )}
 
-              {task.subTasks.length > 0 ? (
+              {localSubTasks.length > 0 ? (
                 <div className="space-y-4">
-                  {task.subTasks.map(subTask => {
+                  {localSubTasks.map(subTask => {
                     const isCompleted = getSubTaskCompletedStatus(subTask.id, subTask.completed);
-                    const isEditingAssigneeForThis = editingAssignee[subTask.id];
+                    const assignee = getSubTaskAssignee(subTask.id, subTask.assignee);
                     
                     return (
                       <div key={subTask.id} className="border rounded-lg p-4 bg-gray-50">
@@ -368,49 +374,25 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                             </div>
                             
                             <div className="space-y-3">
-                              {/* 담당자 섹션 */}
                               <div className="flex items-center space-x-3">
                                 <span className="text-sm font-medium text-gray-700">담당자:</span>
-                                {isEditingAssigneeForThis ? (
-                                  <div className="flex items-center space-x-2">
-                                    <Select 
-                                      defaultValue={subTask.assignee} 
-                                      onValueChange={(value) => handleAssigneeChange(subTask.id, value)}
-                                    >
-                                      <SelectTrigger className="w-32">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {teamMembers.map(member => (
-                                          <SelectItem key={member} value={member}>{member}</SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => setEditingAssignee(prev => ({ ...prev, [subTask.id]: false }))}
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center space-x-2">
-                                    <Badge variant="outline" className="text-xs">
-                                      {subTask.assignee}
-                                    </Badge>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => setEditingAssignee(prev => ({ ...prev, [subTask.id]: true }))}
-                                    >
-                                      <UserCheck className="w-4 h-4" />
-                                    </Button>
-                                  </div>
-                                )}
+                                <div className="flex items-center space-x-2">
+                                  <Select 
+                                    value={assignee}
+                                    onValueChange={(value) => handleAssigneeChange(subTask.id, value)}
+                                  >
+                                    <SelectTrigger className="w-32">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {teamMembers.map(member => (
+                                        <SelectItem key={member} value={member}>{member}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               </div>
 
-                              {/* 진행 상태 섹션 */}
                               <div className="flex items-center space-x-4">
                                 <span className="text-sm font-medium text-gray-700">진행 상태:</span>
                                 <RadioGroup
@@ -436,19 +418,14 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
                           </div>
                         </div>
                         
-                        {/* 메모 섹션 */}
                         <div className="mt-3 pt-3 border-t">
                           <div className="flex justify-between items-center mb-2">
                             <h4 className="text-sm font-medium">협업 메모</h4>
-                            <Button size="sm" onClick={() => handleMemoSave(subTask.id)}>
-                              <Save className="w-4 h-4 mr-1" />
-                              저장
-                            </Button>
                           </div>
                           <Textarea
-                            value={getMemoValue(subTask.id)}
-                            onChange={(e) => handleMemoChange(subTask.id, e.target.value)}
+                            defaultValue={subTask.memo || ''}
                             placeholder="협업을 위한 메모를 입력하세요..."
+                            onBlur={(e) => handleMemoSave(subTask.id, e.target.value)}
                             rows={3}
                           />
                         </div>
