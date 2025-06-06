@@ -38,13 +38,13 @@ const Auth = () => {
       
       // 더 구체적인 오류 메시지 제공
       if (error.message?.includes('Invalid login credentials')) {
-        toast.error('사용자 ID 또는 비밀번호가 올바르지 않습니다.');
+        toast.error('사용자 ID 또는 비밀번호가 올바르지 않습니다. 관리자에게 계정 등록을 요청하세요.');
       } else if (error.message?.includes('Email not confirmed')) {
         toast.error('계정 인증이 필요합니다. 관리자에게 문의하세요.');
       } else if (error.message?.includes('Too many requests')) {
         toast.error('너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.');
       } else {
-        toast.error('로그인에 실패했습니다. 사용자 ID와 비밀번호를 확인해주세요.');
+        toast.error('로그인에 실패했습니다. 관리자에게 문의하세요.');
       }
     } finally {
       setLoading(false);
@@ -88,6 +88,13 @@ const Auth = () => {
               {loading ? '로그인 중...' : '로그인'}
             </Button>
           </form>
+          
+          <div className="mt-4 p-3 bg-blue-50 rounded-md">
+            <p className="text-sm text-blue-800">
+              <strong>계정이 없으신가요?</strong><br />
+              관리자에게 계정 등록을 요청해주세요.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -1,4 +1,6 @@
+
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Edit, Trash2, KeyRound, RefreshCw } from 'lucide-react';
+import { UserPlus, Edit, Trash2, KeyRound, RefreshCw, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -21,6 +23,7 @@ interface Profile {
 }
 
 const TeamManagement = () => {
+  const { isAdmin, userProfile } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -47,6 +50,21 @@ const TeamManagement = () => {
   useEffect(() => {
     fetchProfiles();
   }, []);
+
+  // 관리자가 아닌 경우 접근 제한
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <AlertTriangle className="w-16 h-16 text-amber-500" />
+        <h2 className="text-2xl font-bold text-gray-800">접근 권한이 없습니다</h2>
+        <p className="text-gray-600 text-center">
+          사원 관리 기능은 관리자만 사용할 수 있습니다.
+          <br />
+          현재 로그인된 계정: {userProfile?.name} ({userProfile?.role})
+        </p>
+      </div>
+    );
+  }
 
   const fetchProfiles = async () => {
     try {

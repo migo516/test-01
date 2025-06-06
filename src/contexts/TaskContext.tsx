@@ -74,12 +74,12 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         .from('tasks')
         .select(`
           *,
-          assignee_profile:profiles!tasks_assignee_id_fkey(name, deleted_at),
+          assignee_profile:profiles!tasks_assignee_id_fkey(name),
           sub_tasks(*,
-            assignee_profile:profiles!sub_tasks_assignee_id_fkey(name, deleted_at)
+            assignee_profile:profiles!sub_tasks_assignee_id_fkey(name)
           ),
           comments(*,
-            author_profile:profiles!comments_author_id_fkey(name, deleted_at)
+            author_profile:profiles!comments_author_id_fkey(name)
           )
         `);
 
@@ -123,7 +123,6 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, name')
-        .is('deleted_at', null)  // 삭제되지 않은 사용자만 조회
         .order('name');
 
       if (error) throw error;
@@ -136,10 +135,9 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteTeamMember = async (memberId: string) => {
     try {
-      // Hard delete 대신 soft delete 사용
       const { error } = await supabase
         .from('profiles')
-        .update({ deleted_at: new Date().toISOString() })
+        .delete()
         .eq('id', memberId);
 
       if (error) throw error;
