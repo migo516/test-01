@@ -218,27 +218,33 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 
   const addComment = async (taskId: string, content: string, author: string) => {
     try {
-      // 현재 사용자의 프로필 ID를 가져옵니다
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('name', author)
-        .single();
+      // 현재 로그인된 사용자의 ID를 직접 사용
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
 
-      if (profileError) throw profileError;
+      console.log('댓글 추가 시도:', { taskId, content, userId: user.id });
 
       const { error } = await supabase
         .from('comments')
         .insert({
           task_id: taskId,
           content,
-          author_id: profile.id
+          author_id: user.id
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('댓글 추가 Supabase 오류:', error);
+        throw error;
+      }
+      
+      console.log('댓글 추가 성공, 업무 목록 새로고침 중...');
       await loadTasks();
     } catch (error) {
       console.error('댓글 추가 실패:', error);
+      throw error;
     }
   };
 

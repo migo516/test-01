@@ -1,6 +1,7 @@
 
 import { useState } from 'react';
 import { Comment, useTaskContext } from '@/contexts/TaskContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
@@ -14,13 +15,18 @@ interface TaskCommentsProps {
 
 export const TaskComments = ({ taskId, comments }: TaskCommentsProps) => {
   const { addComment } = useTaskContext();
+  const { userProfile } = useAuth();
   const [newComment, setNewComment] = useState('');
-  const [currentUser] = useState('김개발');
 
   const handleAddComment = async () => {
+    if (!userProfile) {
+      toast.error('로그인이 필요합니다.');
+      return;
+    }
+
     if (newComment.trim()) {
       try {
-        await addComment(taskId, newComment, currentUser);
+        await addComment(taskId, newComment, userProfile.name);
         setNewComment('');
         toast.success('댓글이 추가되었습니다.');
       } catch (error) {
@@ -29,6 +35,15 @@ export const TaskComments = ({ taskId, comments }: TaskCommentsProps) => {
       }
     }
   };
+
+  if (!userProfile) {
+    return (
+      <div>
+        <h3 className="font-semibold mb-3">댓글</h3>
+        <p className="text-gray-500">댓글을 작성하려면 로그인이 필요합니다.</p>
+      </div>
+    );
+  }
 
   return (
     <div>
