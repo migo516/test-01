@@ -17,6 +17,7 @@ export const TaskComments = ({ taskId, comments }: TaskCommentsProps) => {
   const { addComment } = useTaskContext();
   const { userProfile } = useAuth();
   const [newComment, setNewComment] = useState('');
+  const [localComments, setLocalComments] = useState<Comment[]>([]);
 
   const handleAddComment = async () => {
     if (!userProfile) {
@@ -25,12 +26,27 @@ export const TaskComments = ({ taskId, comments }: TaskCommentsProps) => {
     }
 
     if (newComment.trim()) {
+      const tempComment: Comment = {
+        id: `temp-${Date.now()}`,
+        author: userProfile.name,
+        content: newComment,
+        timestamp: new Date()
+      };
+
+      // Optimistic update - 즉시 화면에 표시
+      setLocalComments(prev => [...prev, tempComment]);
+      setNewComment('');
+
       try {
         await addComment(taskId, newComment, userProfile.name);
-        setNewComment('');
+        // 서버에서 성공하면 임시 댓글을 제거 (실제 댓글은 props로 들어옴)
+        setLocalComments(prev => prev.filter(c => c.id !== tempComment.id));
         toast.success('댓글이 추가되었습니다.');
       } catch (error) {
         console.error('댓글 추가 실패:', error);
+        // 실패하면 임시 댓글 제거하고 입력값 복원
+        setLocalComments(prev => prev.filter(c => c.id !== tempComment.id));
+        setNewComment(tempComment.content);
         toast.error('댓글 추가에 실패했습니다.');
       }
     }
@@ -45,11 +61,16 @@ export const TaskComments = ({ taskId, comments }: TaskCommentsProps) => {
     );
   }
 
+  // 실제 댓글과 임시 댓글을 합쳐서 표시
+  const allComments = [...comments, ...localComments].sort((a, b) => 
+    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+
   return (
     <div>
       <h3 className="font-semibold mb-3">댓글</h3>
       <div className="space-y-3 mb-4">
-        {comments.map(comment => (
+        {allComments.map(comment => (
           <div key={comment.id} className="bg-gray-50 p-3 rounded-lg">
             <div className="flex justify-between items-center mb-1">
               <span className="font-medium text-sm">{comment.author}</span>
@@ -58,6 +79,9 @@ export const TaskComments = ({ taskId, comments }: TaskCommentsProps) => {
               </span>
             </div>
             <p className="text-gray-700">{comment.content}</p>
+            {comment.id.startsWith('temp-') && (
+              <div className="text-xs text-gray-400 mt-1">전송 중...</div>
+            )}
           </div>
         ))}
       </div>

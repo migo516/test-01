@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Task, useTaskContext } from '@/contexts/TaskContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -25,9 +25,9 @@ export const TaskDetailModal = ({ task, isOpen, onClose }: TaskDetailModalProps)
   const [editedTask, setEditedTask] = useState(task);
 
   // task가 변경될 때마다 editedTask 업데이트
-  useState(() => {
+  useEffect(() => {
     setEditedTask(task);
-  });
+  }, [task]);
 
   const handleSaveEdit = async () => {
     try {
