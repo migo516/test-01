@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,12 @@ interface Profile {
   role: string;
   phone?: string;
   created_at: string;
+}
+
+interface DeleteUserResponse {
+  success: boolean;
+  error?: string;
+  message?: string;
 }
 
 const TeamManagement = () => {
@@ -249,9 +256,10 @@ const TeamManagement = () => {
         throw error;
       }
 
-      // RPC 함수의 응답 확인
-      if (!data.success) {
-        throw new Error(data.error || '사용자 삭제에 실패했습니다.');
+      // RPC 함수의 응답 확인 (타입 단언 추가)
+      const response = data as DeleteUserResponse;
+      if (!response.success) {
+        throw new Error(response.error || '사용자 삭제에 실패했습니다.');
       }
 
       console.log('사용자 완전 삭제 성공');
