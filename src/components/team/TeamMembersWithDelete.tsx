@@ -55,20 +55,20 @@ const TeamMembersWithDelete = () => {
     try {
       console.log('사용자 완전 삭제 시작:', memberId, memberName);
       
-      // 새로운 RPC 함수를 사용하여 사용자를 완전히 삭제
-      const { data, error } = await supabase.rpc('delete_user_completely', {
-        user_id_to_delete: memberId
+      // Edge Function을 사용하여 사용자를 완전히 삭제
+      const { data, error } = await supabase.functions.invoke('delete-user-completely', {
+        body: {
+          userId: memberId
+        }
       });
 
       if (error) {
-        console.error('RPC 함수 호출 오류:', error);
+        console.error('Edge Function 호출 오류:', error);
         throw error;
       }
 
-      // RPC 함수의 응답 확인 (올바른 타입 단언 사용)
-      const response = data as unknown as DeleteUserResponse;
-      if (!response.success) {
-        throw new Error(response.error || '사용자 삭제에 실패했습니다.');
+      if (data.error) {
+        throw new Error(data.error);
       }
 
       console.log('사용자 완전 삭제 성공');
