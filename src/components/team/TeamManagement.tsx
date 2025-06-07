@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -256,8 +255,8 @@ const TeamManagement = () => {
         throw error;
       }
 
-      // RPC 함수의 응답 확인 (타입 단언 추가)
-      const response = data as DeleteUserResponse;
+      // RPC 함수의 응답 확인 (올바른 타입 단언 사용)
+      const response = data as unknown as DeleteUserResponse;
       if (!response.success) {
         throw new Error(response.error || '사용자 삭제에 실패했습니다.');
       }
