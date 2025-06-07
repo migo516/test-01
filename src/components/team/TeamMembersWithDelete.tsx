@@ -42,24 +42,36 @@ const TeamMembersWithDelete = () => {
   };
 
   const handleDeleteMember = async (memberId: string, memberName: string) => {
-    if (!confirm(`정말로 ${memberName}님을 삭제하시겠습니까?`)) {
+    if (!confirm(`정말로 ${memberName}님을 완전히 삭제하시겠습니까?\n\n경고: 이 작업은 되돌릴 수 없으며, 해당 사원은 로그인할 수 없게 됩니다.`)) {
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', memberId);
-
-      if (error) throw error;
+      console.log('사용자 완전 삭제 시작:', memberId, memberName);
       
-      toast.success(`${memberName}님이 삭제되었습니다.`);
+      // 새로운 RPC 함수를 사용하여 사용자를 완전히 삭제
+      const { data, error } = await supabase.rpc('delete_user_completely', {
+        user_id_to_delete: memberId
+      });
+
+      if (error) {
+        console.error('RPC 함수 호출 오류:', error);
+        throw error;
+      }
+
+      // RPC 함수의 응답 확인
+      if (!data.success) {
+        throw new Error(data.error || '사용자 삭제에 실패했습니다.');
+      }
+
+      console.log('사용자 완전 삭제 성공');
+      toast.success(`${memberName}님이 완전히 삭제되었습니다. 로그인도 불가능합니다.`);
+      
       await loadTeamMembers();
       refreshTasks();
-    } catch (error) {
+    } catch (error: any) {
       console.error('사원 삭제 실패:', error);
-      toast.error('사원 삭제에 실패했습니다.');
+      toast.error(`사원 삭제에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
     }
   };
 

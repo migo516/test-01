@@ -237,54 +237,25 @@ const TeamManagement = () => {
 
     setLoading(true);
     try {
-      console.log('삭제 시작:', profileToDelete.id, profileToDelete.name);
+      console.log('사용자 완전 삭제 시작:', profileToDelete.id, profileToDelete.name);
       
-      // 먼저 해당 사용자에게 배정된 모든 업무의 배정을 해제
-      const { error: unassignError } = await supabase
-        .from('tasks')
-        .update({ assignee_id: null })
-        .eq('assignee_id', profileToDelete.id);
-
-      if (unassignError) {
-        console.error('업무 배정 해제 오류:', unassignError);
-        throw unassignError;
-      }
-
-      // 서브태스크 배정도 해제
-      const { error: unassignSubTaskError } = await supabase
-        .from('sub_tasks')
-        .update({ assignee_id: null })
-        .eq('assignee_id', profileToDelete.id);
-
-      if (unassignSubTaskError) {
-        console.error('서브태스크 배정 해제 오류:', unassignSubTaskError);
-        throw unassignSubTaskError;
-      }
-
-      // 댓글 삭제 (작성자가 삭제되는 사용자인 경우)
-      const { error: deleteCommentsError } = await supabase
-        .from('comments')
-        .delete()
-        .eq('author_id', profileToDelete.id);
-
-      if (deleteCommentsError) {
-        console.error('댓글 삭제 오류:', deleteCommentsError);
-        throw deleteCommentsError;
-      }
-      
-      // 프로필 삭제
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', profileToDelete.id);
+      // 새로운 RPC 함수를 사용하여 사용자를 완전히 삭제
+      const { data, error } = await supabase.rpc('delete_user_completely', {
+        user_id_to_delete: profileToDelete.id
+      });
 
       if (error) {
-        console.error('삭제 오류:', error);
+        console.error('RPC 함수 호출 오류:', error);
         throw error;
       }
-      
-      console.log('삭제 성공');
-      toast.success(`${profileToDelete.name}님이 삭제되었습니다.`);
+
+      // RPC 함수의 응답 확인
+      if (!data.success) {
+        throw new Error(data.error || '사용자 삭제에 실패했습니다.');
+      }
+
+      console.log('사용자 완전 삭제 성공');
+      toast.success(`${profileToDelete.name}님이 완전히 삭제되었습니다. 로그인도 불가능합니다.`);
       
       setIsDeleteModalOpen(false);
       setProfileToDelete(null);
@@ -292,30 +263,8 @@ const TeamManagement = () => {
       // 목록 새로고침
       await fetchProfiles();
     } catch (error: any) {
-      console.error('사원 삭제 실패:', error);
-      toast.error(`사원 삭제에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetUserPassword = async (userId: string) => {
-    setLoading(true);
-    try {
-      // 사용자 ID를 이메일 형식으로 변환
-      const email = `${userId}@company.com`;
-      
-      // 비밀번호 재설정 이메일 발송
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/auth'
-      });
-
-      if (error) throw error;
-
-      toast.success('비밀번호 재설정 이메일이 발송되었습니다.');
-    } catch (error: any) {
-      console.error('비밀번호 재설정 실패:', error);
-      toast.error('비밀번호 재설정에 실패했습니다.');
+      console.error('사용자 삭제 실패:', error);
+      toast.error(`사용자 삭제에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
     } finally {
       setLoading(false);
     }
@@ -663,16 +612,24 @@ const TeamManagement = () => {
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>사원 삭제 확인</DialogTitle>
+            <DialogTitle>사원 완전 삭제 확인</DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4">
             <p className="text-gray-600">
-              정말로 <strong>{profileToDelete?.name}</strong>님을 삭제하시겠습니까?
+              정말로 <strong>{profileToDelete?.name}</strong>님을 완전히 삭제하시겠습니까?
             </p>
-            <p className="text-sm text-red-600">
-              이 작업은 되돌릴 수 없습니다. 해당 사원에게 배정된 모든 업무의 배정이 해제되고, 작성한 댓글이 삭제됩니다.
-            </p>
+            <div className="bg-red-50 p-3 rounded-md">
+              <p className="text-sm text-red-800">
+                <strong>경고:</strong> 이 작업은 되돌릴 수 없습니다.
+              </p>
+              <ul className="text-sm text-red-700 mt-2 list-disc list-inside">
+                <li>해당 사원의 계정이 완전히 삭제됩니다</li>
+                <li>로그인이 불가능해집니다</li>
+                <li>배정된 모든 업무의 배정이 해제됩니다</li>
+                <li>작성한 댓글이 삭제됩니다</li>
+              </ul>
+            </div>
             
             <div className="flex justify-end space-x-2 pt-4">
               <Button 
@@ -688,7 +645,7 @@ const TeamManagement = () => {
                 onClick={handleDeleteUser}
                 disabled={loading}
               >
-                {loading ? '삭제 중...' : '삭제'}
+                {loading ? '삭제 중...' : '완전 삭제'}
               </Button>
             </div>
           </div>
