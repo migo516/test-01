@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -47,6 +46,22 @@ const TeamManagement = () => {
   });
   const [newPassword, setNewPassword] = useState('');
 
+  // fetchProfiles 함수를 useEffect 이전에 정의
+  const fetchProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (error) {
+      console.error('프로필 로드 실패:', error);
+      toast.error('사원 목록을 불러오지 못했습니다.');
+    }
+  };
+
   useEffect(() => {
     fetchProfiles();
   }, []);
@@ -65,21 +80,6 @@ const TeamManagement = () => {
       </div>
     );
   }
-
-  const fetchProfiles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      setProfiles(data || []);
-    } catch (error) {
-      console.error('프로필 로드 실패:', error);
-      toast.error('사원 목록을 불러오지 못했습니다.');
-    }
-  };
 
   const handleRegisterUser = async (e: React.FormEvent) => {
     e.preventDefault();
